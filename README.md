@@ -59,6 +59,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
 
 설정과 비추론 모드의 근거는 [사용 중인 llama.cpp 버전의 서버 문서](https://github.com/ggml-org/llama.cpp/blob/74b104c9b/tools/server/README.md), [Qwen 공식 모델 카드](https://huggingface.co/Qwen/Qwen3-4B-GGUF)를 참고했습니다.
 
+인사·서비스 소개·범위 밖 질문은 매뉴얼 검색과 LLM 호출 전에 짧게 안내합니다. 예를 들어 ‘안녕 넌 뭐하는 놈이야?’는 서비스 소개로 응답하며 PDF 점검 절차를 붙이지 않습니다. 코드 없는 질문을 무조건 증상으로 처리하지 않고, 설비나 증상이 불명확하면 알람 코드·구체적인 현상을 요청합니다. 명시된 알람 코드가 있으면 코드 검색을 우선합니다.
+
+자연어 증상 검색 뒤에도 LLM이 근거 부족으로 판단하면 관련성을 확인하지 못한 조작 지침을 표시하지 않습니다. 이 의도 분기는 정규식·키워드 기반의 보수적인 안내이며 모든 문장의 의미적 관련성을 완벽히 판별하는 것은 아닙니다. 기존 코드·증상 평가 질문과 검색 지표를 별도로 회귀 검사합니다.
+
 ## 구현 범위
 
 | 항목 | 현재 상태 |

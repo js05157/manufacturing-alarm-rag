@@ -31,3 +31,18 @@ def test_local_server_failure_keeps_app_and_history_alive(monkeypatch):
     app.run()
     assert not app.exception and len(app.chat_message) == 2
     assert "start_llm.ps1" in app.chat_message[1].markdown[0].value
+
+
+def test_greeting_does_not_show_maintenance_instructions_or_llm_timing(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from rag.local_answer_generator import LocalAnswerGenerator
+    def forbidden(*args, **kwargs):
+        pytest.fail("Greeting must not invoke the local model")
+    monkeypatch.setattr(LocalAnswerGenerator, "generate", forbidden)
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=30).run()
+    app.chat_input[0].set_value("안녕 넌 뭐하는 놈이야?").run()
+    assert not app.exception and not app.error
+    text = app.chat_message[1].markdown[0].value
+    assert "도우미" in text and "FR-E800" in text
+    assert "Pr.22" not in text and "PDF" not in text
+    assert not any("로컬 모델 생성" in caption.value for caption in app.caption)

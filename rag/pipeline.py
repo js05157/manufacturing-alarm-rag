@@ -3,7 +3,7 @@ from functools import cached_property
 from time import perf_counter
 
 from config import Settings
-from rag.router import route
+from rag.router import DIRECT_REPLIES, route
 from rag.sqlite_retriever import SQLiteRetriever
 from rag.vector_retriever import VectorRetriever
 
@@ -38,6 +38,8 @@ class RAGService:
             raise ValueError("질문을 입력해 주세요.")
         decision = route(question, self.sqlite.codes())
         result = Retrieval(question, decision.kind, list(decision.codes))
+        if decision.kind in DIRECT_REPLIES:
+            return result
         seen = set()
         for code in decision.codes:
             records = self.sqlite.get(code)
@@ -72,6 +74,10 @@ class RAGService:
     def answer(self, question, evidence_only=False):
         started = perf_counter()
         retrieval = self.retrieve(question)
+        if retrieval.route in DIRECT_REPLIES:
+            return {"status": "guidance", "text": DIRECT_REPLIES[retrieval.route], "evidence_ids": [],
+                    "highlights": [], "mode": "direct", "validation": {"valid": True, "reason": "non-retrieval guidance"},
+                    "elapsed_seconds": perf_counter()-started, "retrieval": asdict(retrieval)}
         if self._generator:
             generator = self._generator
         elif self.settings.llm_backend in ("local", "evidence_only"):

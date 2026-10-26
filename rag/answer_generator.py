@@ -43,6 +43,9 @@ def llm_error_message(exc):
 
 
 def render(retrieval, units, plan, mode):
+    if plan["status"] == "insufficient" and not retrieval.codes:
+        return {"status": "insufficient", "text": "질문과 직접 관련된 매뉴얼 근거가 부족합니다. 알람 코드와 구체적인 설비 증상을 알려 주세요.",
+                "evidence_ids": [], "mode": mode, "highlights": []}
     if not units:
         unknown = ", ".join(retrieval.unknown_codes)
         text = f"{unknown} 코드의 검증된 근거를 찾지 못했습니다. 조작 패널 표시를 확인해 주세요." if unknown else "질문에 답할 매뉴얼 근거가 부족합니다. 알람 코드나 구체적인 증상을 알려 주세요."
