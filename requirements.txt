@@ -1,0 +1,7 @@
+PyMuPDF>=1.26,<1.28
+chromadb>=1.5,<2
+sentence-transformers>=5,<6
+streamlit>=1.50,<2
+openai>=2,<3
+python-dotenv>=1,<2
+pytest>=8,<10
