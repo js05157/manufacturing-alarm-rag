@@ -16,6 +16,32 @@ def citation(evidence):
     return f"{e['source_pdf']} · PDF {e['pdf_page']}쪽 · 문서 {e['printed_page']}쪽"
 
 
+def llm_error_message(exc):
+    """Expose recognized categories, never provider messages or credentials."""
+    body = getattr(exc, "body", None)
+    body = body if isinstance(body, dict) else {}
+    error = body.get("error", body)
+    error = error if isinstance(error, dict) else {}
+    code = error.get("code") or getattr(exc, "code", None)
+    messages = {
+        "credit_balance_exhausted": "API 선불 크레딧이 소진되었습니다(credit_balance_exhausted). OpenAI Platform의 Billing에서 잔액을 충전한 뒤 다시 시도하세요. ChatGPT 구독과 API 결제는 별도입니다.",
+        "insufficient_quota": "API 잔액 또는 사용 할당량이 부족합니다(insufficient_quota). OpenAI Platform의 Billing과 Limits를 확인하세요. 반복 요청으로 해결되지 않습니다.",
+        "organization_spend_limit_exceeded": "조직의 API 지출 한도에 도달했습니다. OpenAI Platform의 조직 Limits에서 사용액과 한도를 확인하세요.",
+        "project_spend_limit_exceeded": "프로젝트의 API 지출 한도에 도달했습니다. OpenAI Platform의 해당 프로젝트 Limits에서 사용액과 한도를 확인하세요.",
+        "organization_usage_limit_exceeded": "조직에 허용된 API 사용 한도에 도달했습니다. OpenAI Platform의 Limits에서 사용량과 승인된 한도를 확인하세요.",
+        "billing_hard_limit_reached": "API 결제 한도에 도달했습니다. OpenAI Platform의 Billing과 Limits를 확인하세요.",
+        "usage_limit_exceeded": "API 사용 한도에 도달했습니다. 제공자의 잔액과 사용 한도를 확인하세요.",
+        "rate_limit_exceeded": "API 요청 속도 제한에 도달했습니다(rate_limit_exceeded). 요청 빈도를 줄이고 제공자가 안내한 대기 시간 이후 다시 시도하세요.",
+        "slow_down": "API 요청 속도가 너무 빠르게 증가했습니다(slow_down). 요청 빈도를 줄이고 제공자가 안내한 대기 시간 이후 다시 시도하세요.",
+    }
+    if isinstance(code, str) and code in messages:
+        return messages[code]
+    from openai import RateLimitError
+    if isinstance(exc, RateLimitError):
+        return "API가 HTTP 429로 요청을 거부했습니다. 구체적인 원인 코드가 확인되지 않아 속도 제한인지 잔액·할당량 문제인지 확정할 수 없습니다. 제공자의 Billing과 Limits를 확인하세요."
+    return f"LLM 요청 실패({type(exc).__name__}). .env의 모델명·주소·키와 제공자 상태를 확인하세요."
+
+
 def render(retrieval, units, plan, mode):
     if not units:
         unknown = ", ".join(retrieval.unknown_codes)
@@ -88,9 +114,7 @@ class AnswerGenerator:
                     raise ValueError("LLM response was truncated or refused")
                 plan = json.loads(response.choices[0].message.content)
             except Exception as exc:
-                # Do not emit SDK exception strings, which can contain request URLs
-                # or provider details. Never substitute a different model.
-                raise RuntimeError(f"LLM 요청 실패({type(exc).__name__}). .env의 모델명·주소·키와 제공자 상태를 확인하세요.") from None
+                raise RuntimeError(llm_error_message(exc)) from None
             valid, errors = validate_plan(plan, units)
             if not valid:
                 raise ValueError("LLM 근거 검증 실패: "+"; ".join(errors))
