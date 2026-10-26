@@ -4,6 +4,61 @@
 
 이 프로젝트는 미쓰비시전기 **FR-E800 취급설명서(보수편)** 한국어 64페이지 문서를 대상으로 합니다. CR800 로봇 컨트롤러 매뉴얼용 파서가 아닙니다. 제조사 공식 서비스나 자동 설비 제어 도구가 아니며, 실제 작업에는 해당 설비의 안전 절차를 적용해야 합니다.
 
+## 로컬 Qwen3 실행 — 현재 기본 구성
+
+현재 기본 답변 생성기는 **llama.cpp b11900 + Qwen3 4B Q4_K_M의 로컬 CPU 추론**입니다. 외부 OpenAI 키와 결제는 사용하지 않습니다. 기존 SQLite·E5·Chroma 인덱스와 검색 분기는 그대로 재사용합니다.
+
+모델은 소스코드 밖의 `C:\AI\models\qwen3-4b\Qwen3-4B-Q4_K_M.gguf`에 두며, 실행 파일은 `C:\llama.cpp\llama-b11900-bin-win-cpu-x64\llama-server.exe`를 사용합니다. 모델 다운로드 폴더에서 이동했고 크기는 2,497,280,256바이트입니다. 스크립트가 모델을 다시 다운로드하거나 실행 중인 프로세스를 강제로 종료하지 않습니다.
+
+`.env`의 현재 로컬 설정:
+
+```dotenv
+LLM_BACKEND=local
+LLAMA_SERVER_PATH=C:/llama.cpp/llama-b11900-bin-win-cpu-x64/llama-server.exe
+LOCAL_LLM_MODEL_PATH=C:/AI/models/qwen3-4b/Qwen3-4B-Q4_K_M.gguf
+LOCAL_LLM_URL=http://127.0.0.1:8080/v1
+LOCAL_LLM_PORT=8080
+LOCAL_LLM_MODEL=qwen3-4b
+LOCAL_LLM_CONTEXT=4096
+LOCAL_LLM_MAX_TOKENS=512
+LOCAL_LLM_TIMEOUT=180
+LOCAL_LLM_TEMPERATURE=0.2
+```
+
+프로젝트 루트에서 순서대로 실행합니다. 기존 데이터와 E5 캐시가 있으면 PDF 재처리·재색인은 필요 없습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
+```
+
+[채팅 서비스](http://127.0.0.1:8501), [로컬 모델 상태](http://127.0.0.1:8080/health)를 확인할 수 있습니다. 서버 상태만 확인하려면 `scripts/start_llm.ps1 -CheckOnly`를 사용합니다. 정상 실행 중인 같은 모델은 재시작하지 않고 재사용하며, 다른 프로세스의 포트 점유·다른 모델·잘못된 컨텍스트는 명시적으로 거부합니다. 실행 파일·모델 누락도 오류로 처리합니다.
+
+시작 스크립트는 `--host 127.0.0.1 --port 8080 --ctx-size 4096 --gpu-layers 0 --parallel 1 --threads 6 --threads-batch 6 --batch-size 512 --ubatch-size 128 --jinja --reasoning off --no-context-shift`로 실행합니다. 스레드 기본값은 물리 코어 수와 6 중 작은 값이며 `-Threads`로 조정할 수 있습니다. Windows 백그라운드 창은 숨기고 로컬 `logs/`에 시작 로그를 보존합니다. GPU로 계층을 올리지 않습니다.
+
+`rag/local_llm.py`가 `requests`로 로컬 API를 호출합니다. 키·프록시·리다이렉트·자동 재시도 없이 loopback 주소만 허용합니다. 한국어 시스템 프롬프트, `/no_think`, `enable_thinking=false`, `reasoning_effort=none`을 적용하고, 빈 답변·HTTP 오류·연결 실패·잘린 생성·잘못된 JSON·모델 불일치를 검사합니다. 비어 있는 선행 `<think></think>`만 제거하며 실제 답변이나 비어 있지 않은 추론을 임의 삭제하지 않습니다.
+
+`rag/local_answer_generator.py`는 서버의 `/apply-template`과 `/tokenize`로 **실제 Qwen 토큰 수**를 계산합니다. 프롬프트 + 최대 생성 512 + 여유 96 <= 4096을 만족하도록 원문 항목 전체를 순서대로 묶습니다. 넘치면 여러 요청으로 분할하고, 한 항목 자체가 너무 크면 잘라내지 않고 명시적으로 중단합니다. 문서명·실제/인쇄 페이지를 프롬프트에 포함하며, 반환한 ID·한국어 원문 인용을 실제 검색 근거와 대조합니다. 기존 필수 점검·대처 목록과 출처 검증도 유지합니다.
+
+현재 RAG의 추출형 생성 계약을 유지하므로, Qwen이 관련 한국어 원문을 선택해 생성하고 프로그램이 전체 목록을 보완합니다. 자유로운 진단 문장이나 의역의 정확도를 자동으로 보장한다고 주장하지 않습니다. 서버가 꺼져 있으면 화면에 시작 방법을 표시하며 대화 세션은 유지합니다. `LLM_BACKEND=evidence_only`는 명시적인 원문 정리 모드이고, 로컬 서버 오류 때 이 모드나 외부 모델로 자동 전환하지 않습니다.
+
+로컬 검증 명령:
+
+```powershell
+# 모의 HTTP·토큰 예산·기존 검색·UI 회귀 검사 (실제 LLM 추론 없음)
+.\.venv\Scripts\python.exe -m pytest -q
+# 기존 40문항 검색 평가: 기존 결과를 덮어쓰지 않음, LLM 호출 없음
+.\.venv\Scripts\python.exe -m evaluation.evaluate --mode evidence_only --repeats 1 --output-dir evaluation/local_llm/retrieval_regression
+# 실제 로컬 Qwen 추론과 출처 검증
+.\.venv\Scripts\python.exe -m evaluation.validate_local
+```
+
+기존 `evaluation/questions.json`, `results.json/csv`, `REPORT.md`를 보존하고 로컬 결과는 `evaluation/local_llm/` 아래에 분리합니다. 로컬 전체 40문항 생성 평가는 `evaluation.evaluate --mode llm --repeats 1 --output-dir evaluation/local_llm/full`로 별도 실행할 수 있습니다. 이번 통합의 실제 추론 사례·시간·검증 한계는 [로컬 통합 보고서](evaluation/local_llm/REPORT.md)에 있습니다. 기존 Hit@3 90%는 검색 지표이며 로컬 LLM 답변 정답률이 아닙니다.
+
+설치 시 기존 직접 의존성에 `requests>=2.32,<3`만 추가했습니다. 검증 환경에는 이미 2.34.2가 설치되어 있어 추가 설치하지 않았습니다. 기존 `requirements.lock.txt`에도 포함되어 있으며 파일 전체를 재생성하지 않았습니다. llama.cpp 실행 파일과 GGUF 가중치는 pip 의존성에 포함하지 않습니다.
+
+설정과 비추론 모드의 근거는 [사용 중인 llama.cpp 버전의 서버 문서](https://github.com/ggml-org/llama.cpp/blob/74b104c9b/tools/server/README.md), [Qwen 공식 모델 카드](https://huggingface.co/Qwen/Qwen3-4B-GGUF)를 참고했습니다.
+
 ## 구현 범위
 
 | 항목 | 현재 상태 |
@@ -14,7 +69,7 @@
 | 원문 검증 | 89개 레코드 통과, 격리 0개, 원문 데이터 코드 불일치 1개 기록 |
 | 로컬 의미 검색 | multilingual-e5-small, 384차원, 청크 224개, 길이 초과 제외 0개 |
 | 서비스 | 정확 코드 검색, 자연어 증상 검색, 근거 검증, Streamlit 세션 채팅 |
-| LLM | OpenAI 호환 API 어댑터와 모의 응답 테스트 구현. 실제 API 호출·정답률은 사용자 요청으로 미측정 |
+| LLM | 로컬 Qwen3 4B CPU 추론·한국어 답변·RAG 연결 확인. 전체 40문항 LLM 정답률은 미측정 |
 | 평가 | 원문 기반 40문항, API 없는 모드로 문항당 3회 실행 |
 
 20개는 초기 파이프라인 검증 범위였으며, 최종 구축은 위의 전체 지원 범위로 확대했습니다. 세부 수치와 실행 조건은 [평가 보고서](evaluation/REPORT.md)를 확인하세요.
@@ -41,7 +96,7 @@ flowchart TD
     D -->|코드가 있는 결과| S
     D -->|코드 없는 증상 행| G[출처가 있는 근거 묶음]
     S --> G
-    G --> L[설정한 LLM의 JSON 근거 선택]
+    G --> L[llama.cpp 로컬 Qwen3의 JSON 근거 선택]
     L --> A[인용 검증·필수 목록 보완·출처 검증]
     A --> U[코드별·증상별 답변]
 ```
@@ -139,7 +194,7 @@ OpenAI 예시는 `LLM_BASE_URL=https://api.openai.com/v1`, OpenRouter 예시는 
 
 LLM은 JSON으로 근거 ID와 **해당 항목 전체 인용**을 반환하는 추출형 생성 방식을 사용합니다. 새로운 기술적 주장을 자유롭게 추가하지 못하게 하여 검증 범위를 명확히 했습니다. 인용을 일부 잘라 조건이나 부정을 잃은 경우, 존재하지 않는 ID, 추가 응답 필드, 잘린 출력, API 실패는 명시적인 오류입니다. 필수 내용·체크 포인트·대처·주의사항은 원래 순서로 모두 보완하고 코드별로 표시합니다. 사용자의 가설을 실제 진단 결과로 단정하지 않습니다. 자유로운 의역·설명보다 원문 보존을 우선한 현재 버전의 의도적인 제약입니다.
 
-LLM 모델과 키가 모두 설정되지 않은 앱은 **원문 검색 모드**임을 화면에 표시합니다. 이 모드는 API를 호출하지 않고 검색된 근거를 정리하며, 의미적 관련성이나 특정 원인 확인은 LLM 검증 결과로 주장하지 않습니다. 설정된 모델의 호출이 실패했을 때는 원문 모드나 다른 모델로 조용히 전환하지 않습니다. 이번 개발·평가는 사용자의 선택에 따라 실제 LLM 호출 없이 수행했습니다.
+현재 기본 로컬 모드는 API 키가 필요 없습니다. 외부 제공자의 기존 어댑터는 보존했으며 `LLM_BACKEND=openai`를 명시적으로 선택한 경우에만 위 외부 모델 설정을 사용합니다. 명시적 원문 정리 모드는 `LLM_BACKEND=evidence_only`입니다. 기존 초기 평가 보고서는 LLM 호출 없이 작성된 기록이며, 이번 실제 로컬 추론 검증과 구분합니다. 설정 변경 후에는 Streamlit 프로세스를 재시작하세요.
 
 ## API 결제·속도 제한 오류
 
@@ -162,7 +217,7 @@ HTTP 429의 `RateLimitError`는 모두 일시적인 호출 빈도 제한을 뜻�
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-최종 검증 환경에서 테스트 **31개가 통과**했으며 `pip check`도 통과했습니다. 로컬 PDF·DB가 없는 공개 저장소 환경에서는 원문 통합 검사가 건너뛰어지므로, 데이터 구축 후 실행해야 같은 검증 범위를 확인할 수 있습니다.
+초기 구축 시 테스트 31개를 통과했으며, 이후 로컬 HTTP·토큰 예산·서버 시작 검사와 UI 오류 회귀 테스트를 추가했습니다. 현재 검증 수와 결과는 로컬 통합 보고서에 기록합니다. 로컬 PDF·DB가 없는 공개 저장소 환경에서는 원문 통합 검사가 건너뛰어지므로, 데이터 구축 후 실행해야 같은 검증 범위를 확인할 수 있습니다.
 
 핵심 지표는 세 개입니다.
 
@@ -197,4 +252,4 @@ storage/                          SQLite·Chroma (비공개)
 
 PDF, 대량 추출 데이터, 정답 원문, 실제 답변 로그, DB/인덱스, 캐시, `.env`는 `.gitignore`로 제외합니다. 공개 저장소에는 코드·질문 사양·집계 보고서·환경변수 예시만 포함합니다. 원본 PDF의 재배포 권한을 가정하지 않습니다. 개발 규칙과 테스트→검토→Conventional Commit→push 절차는 [AGENTS.md](AGENTS.md)에 기록했습니다.
 
-현재 한계는 특정 PDF 판본에 맞춘 표 파서, 작은 개발용 평가 세트, 의미 검색 실패 가능성, 자동 검증만으로 확정할 수 없는 증상 관련성, 미실행된 실제 LLM 연동·성능 평가입니다. 다른 매뉴얼이나 판본은 구조를 분석하고 파서·검증·평가를 다시 확인해야 합니다.
+현재 한계는 특정 PDF 판본에 맞춘 표 파서, 작은 개발용 평가 세트, 의미 검색 실패 가능성, 자동 검증만으로 확정할 수 없는 증상 관련성, CPU 추론 지연 및 미실행된 전체 40문항 로컬 LLM 정답률 평가입니다. 다른 매뉴얼이나 판본은 구조를 분석하고 파서·검증·평가를 다시 확인해야 합니다.
