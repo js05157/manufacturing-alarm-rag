@@ -22,7 +22,7 @@ class VectorRetriever:
         indexed_revision = self.manifest["identity"]["revision"]
         if revision and revision != indexed_revision:
             raise ValueError("설정한 임베딩 revision이 인덱스와 다릅니다. 동일 revision으로 재구축하세요.")
-        self.encoder = encoder or E5Encoder(model_name, indexed_revision)
+        self.encoder = encoder or E5Encoder(model_name, indexed_revision, local_files_only=True)
         if self.manifest["identity"]["model"] != model_name:
             raise ValueError("임베딩 모델 설정이 인덱스와 다릅니다. 동일 모델로 재구축하세요.")
         import chromadb

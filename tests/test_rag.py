@@ -14,6 +14,7 @@ from rag.vector_retriever import unique_code_ranking
 
 @pytest.mark.parametrize("question,expected", [
     ("e.oc1 알람", ("E.OC1",)), ("E.OC10의 원인", ("E.OC10",)),
+    ("E.OC1 알람", ("E.OC1",)),
     ("E.OC1과 E.OV1", ("E.OC1", "E.OV1")), ("Er1이 떠요", ("ER1",)),
     ("Err. 표시", ("ERR.",)), ("FN 경보", ("FN",)), ("OLC가 발생", ("OLC",)),
     ("E. 5 코드", ("E.5",)), ("E.OC1.2 알람", ("E.OC1.2",)),

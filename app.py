@@ -15,7 +15,7 @@ def service():
 
 
 settings = Settings()
-evidence_only = not (settings.llm_model and settings.llm_api_key)
+evidence_only = settings.llm_backend == "evidence_only" or (settings.llm_backend == "openai" and not (settings.llm_model and settings.llm_api_key))
 with st.sidebar:
     st.subheader("매뉴얼 안내")
     st.write("미쓰비시전기 FR-E800 시리즈 취급설명서(보수편)")
@@ -23,6 +23,8 @@ with st.sidebar:
     st.caption("PDF 쪽수는 파일의 실제 페이지입니다. 문서 쪽수는 하단에 인쇄된 번호입니다.")
     if evidence_only:
         st.info("원문 검색 모드: LLM을 사용하지 않고 매뉴얼 근거를 정리합니다.")
+    elif settings.llm_backend == "local":
+        st.info("로컬 Qwen3 답변 생성 · 외부 LLM API 전송 없음")
     st.caption("실제 조작·점검은 설비의 안전 절차와 제조사 매뉴얼을 따라 주세요.")
 
 if "messages" not in st.session_state:
@@ -38,10 +40,12 @@ if question:
         st.write(question)
     with st.chat_message("assistant"):
         try:
-            with st.spinner("매뉴얼 근거를 확인하고 있습니다…"):
+            with st.spinner("매뉴얼 근거를 검색하고 답변을 생성하고 있습니다…"):
                 answer = service().answer(question, evidence_only=evidence_only)
             st.markdown(answer["text"])
             st.caption(f"응답 시간 {answer['elapsed_seconds']:.2f}초")
+            if answer.get("local_llm", {}).get("batch_count"):
+                st.caption(f"로컬 모델 생성 {answer['local_llm']['inference_seconds']:.2f}초")
             st.session_state.messages.append({"role": "assistant", "content": answer["text"]})
         except (ValueError, FileNotFoundError, RuntimeError) as exc:
             text = str(exc)

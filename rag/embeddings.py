@@ -4,15 +4,18 @@ from pathlib import Path
 
 
 class E5Encoder:
-    def __init__(self, model_name, revision=None):
+    def __init__(self, model_name, revision=None, local_files_only=False):
         self.model_name = model_name
         self.revision = revision
+        self.local_files_only = local_files_only
 
     @cached_property
     def resolved_revision(self):
         from huggingface_hub import hf_hub_download, try_to_load_from_cache
         import re
         cached = try_to_load_from_cache(self.model_name, "config.json", revision=self.revision or "main")
+        if not isinstance(cached, str) and self.local_files_only:
+            raise FileNotFoundError("로컬 E5 모델 캐시가 없습니다. 기존 인덱스와 동일한 모델 revision을 먼저 준비하세요. 자동 다운로드하지 않습니다.")
         config_path = cached if isinstance(cached, str) else hf_hub_download(self.model_name, "config.json", revision=self.revision or "main")
         revision = Path(config_path).parent.name
         if not re.fullmatch(r"[a-f0-9]{40}", revision):
@@ -22,7 +25,7 @@ class E5Encoder:
     @cached_property
     def model(self):
         from sentence_transformers import SentenceTransformer
-        return SentenceTransformer(self.model_name, revision=self.resolved_revision, device="cpu", trust_remote_code=False)
+        return SentenceTransformer(self.model_name, revision=self.resolved_revision, device="cpu", trust_remote_code=False, local_files_only=self.local_files_only)
 
     @property
     def identity(self):

@@ -72,8 +72,17 @@ class RAGService:
     def answer(self, question, evidence_only=False):
         started = perf_counter()
         retrieval = self.retrieve(question)
-        from rag.answer_generator import AnswerGenerator
-        generator = self._generator or AnswerGenerator(self.settings)
+        if self._generator:
+            generator = self._generator
+        elif self.settings.llm_backend in ("local", "evidence_only"):
+            from rag.local_answer_generator import LocalAnswerGenerator
+            generator = LocalAnswerGenerator(self.settings)
+            evidence_only = evidence_only or self.settings.llm_backend == "evidence_only"
+        elif self.settings.llm_backend == "openai":
+            from rag.answer_generator import AnswerGenerator
+            generator = AnswerGenerator(self.settings)
+        else:
+            raise ValueError("LLM_BACKEND는 local, evidence_only 또는 명시적으로 설정한 openai여야 합니다.")
         answer = generator.generate(retrieval, evidence_only=evidence_only)
         answer["elapsed_seconds"] = perf_counter()-started
         answer["retrieval"] = asdict(retrieval)

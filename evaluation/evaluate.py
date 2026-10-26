@@ -128,14 +128,17 @@ def main():
     parser.add_argument("--mode", choices=["evidence_only", "llm"], default="evidence_only")
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--review", type=Path)
+    parser.add_argument("--output-dir", type=Path, help="Separate output directory; local mode defaults to evaluation/local_llm/evaluation")
     parser.add_argument("--rescore", action="store_true", help="Apply manual reviews to saved LLM responses without API calls")
     args = parser.parse_args()
+    settings = Settings()
+    output_dir = args.output_dir or (ROOT / "evaluation/local_llm/evaluation" if settings.llm_backend == "local" else ROOT / "evaluation")
     if args.repeats < 1:
         parser.error("repeats must be positive")
     if args.rescore:
         if not args.review:
             parser.error("--rescore requires --review")
-        saved = read_json(ROOT / "evaluation/results.json")
+        saved = read_json(output_dir / "results.json")
         if saved["conditions"]["mode"] != "llm":
             parser.error("Evidence-only results cannot become LLM accuracy measurements")
         review = read_json(args.review)
@@ -147,11 +150,10 @@ def main():
         saved["metrics"]["answer_accuracy"] = sum(judged)/len(judged) if len(judged) == len(saved["rows"]) and judged else None
         saved["metrics"]["answer_judged"] = len(judged)
         saved["metrics"]["answer_pending_review"] = len(saved["rows"])-len(judged)
-        save_results(ROOT / "evaluation", None, saved["rows"], saved["metrics"], saved["conditions"])
+        save_results(output_dir, None, saved["rows"], saved["metrics"], saved["conditions"])
         print(saved["metrics"])
         return
-    settings = Settings()
-    if args.mode == "llm" and not (settings.llm_model and settings.llm_api_key):
+    if args.mode == "llm" and settings.llm_backend == "openai" and not (settings.llm_model and settings.llm_api_key):
         parser.error("LLM_MODEL / LLM_API_KEY must be configured; no fallback model is used")
     dataset = read_json(ROOT / "evaluation/questions.json")
     source = read_json(ROOT / "data/processed/alarms.json")
@@ -161,15 +163,16 @@ def main():
     if service.sqlite.source_hash() != dataset["source_sha256"]:
         raise ValueError("Gold and database source hashes differ")
     conditions = {"run_at": datetime.now(timezone(timedelta(hours=9))).isoformat(), "mode": args.mode,
-                  "model": settings.llm_model if args.mode == "llm" else "not_called",
+                  "backend": settings.llm_backend,
+                  "model": (settings.local_llm_model if settings.llm_backend == "local" else settings.llm_model) if args.mode == "llm" else "not_called",
                   "embedding": service.vector.manifest["identity"], "source_sha256": dataset["source_sha256"],
                   "dataset_fingerprint": fingerprint(dataset), "platform": platform.platform(),
                   "processor": platform.processor(), "python": platform.python_version(), "question_count": len(dataset["questions"]),
                   "repeats": args.repeats, "top_k": settings.top_k, "max_distance": settings.max_distance,
-                  "cache": "weights/index warm, no query/answer cache", "llm_max_tokens": settings.llm_max_tokens,
-                  "packages": {n: importlib.metadata.version(n) for n in ("PyMuPDF", "chromadb", "sentence-transformers", "torch", "streamlit", "openai")}}
+                  "cache": "weights/index warm, no query/answer cache", "llm_max_tokens": settings.local_llm_max_tokens if settings.llm_backend == "local" else settings.llm_max_tokens,
+                  "packages": {n: importlib.metadata.version(n) for n in ("PyMuPDF", "chromadb", "sentence-transformers", "torch", "streamlit", "openai", "requests")}}
     rows, metrics = evaluate(dataset, service, args.mode, args.repeats, read_json(args.review) if args.review else None)
-    save_results(ROOT / "evaluation", dataset, rows, metrics, conditions)
+    save_results(output_dir, dataset, rows, metrics, conditions)
     print(metrics)
 
 

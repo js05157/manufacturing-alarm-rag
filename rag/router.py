@@ -24,7 +24,7 @@ def route(question, known_codes):
             if code == "IP" and not re.match(r"\s*(알람|코드|경보|발생|표시)", question[match.end():]):
                 continue
             found.append((match.start(), code))
-    for match in re.finditer(r"(?<![A-Za-z0-9])([A-Z][A-Z0-9]{1,7})(?=\s*(?:알람|코드|경보))", question):
+    for match in re.finditer(r"(?<![A-Za-z0-9.])([A-Z][A-Z0-9]{1,7})(?=\s*(?:알람|코드|경보))", question):
         found.append((match.start(), match[1]))
     codes = tuple(dict.fromkeys(code for _, code in sorted(found)))
     if not codes:

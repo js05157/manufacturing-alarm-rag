@@ -1,18 +1,25 @@
 from scripts.common import compact
 
 
+def ordered_symptom_rows(retrieval):
+    """Keep symptom-group relevance, then preserve printed procedure row order."""
+    group_order = {section: i for i, section in enumerate(dict.fromkeys(r["section"] for r in retrieval.symptom_rows))}
+    return sorted(retrieval.symptom_rows, key=lambda r: (group_order[r["section"]], r["evidence"]["pdf_page"], r["evidence"].get("row") or 0))
+
+
 def evidence_units(retrieval):
     units = {}
     for record in retrieval.records:
         for kind in ("description", "check_points", "actions", "references", "notes"):
             for item in record[kind]:
                 units[item["id"]] = {**item, "kind": kind, "record_id": record["record_id"], "name": record["name"], "codes": record["codes"]}
-    for row in retrieval.symptom_rows:
+    retrieval_ranks = {r["id"]: i+1 for i, r in enumerate(retrieval.symptom_rows)}
+    for row in ordered_symptom_rows(retrieval):
         text = f"원인: {row['cause']}"
         if row["action"]:
             text += f" / 대책: {row['action']}"
         units[row["id"]] = {"id": row["id"], "text": text, "kind": "symptom", "name": row["name"], "codes": [],
-                              "evidence": [row["evidence"]], "record_id": row["section"]}
+                              "evidence": [row["evidence"]], "record_id": row["section"], "retrieval_rank": retrieval_ranks[row["id"]]}
     return units
 
 
@@ -29,6 +36,8 @@ def validate_plan(plan, units):
     for highlight in highlights:
         if not isinstance(highlight, dict) or set(highlight) != {"evidence_id", "quote"}:
             return False, ["invalid highlight structure"]
+        if not isinstance(highlight["evidence_id"], str):
+            return False, ["invalid evidence id type"]
         unit = units.get(highlight["evidence_id"])
         # Whole evidence items only: substring quotes could drop a negation or
         # operating-condition qualifier while still passing a substring check.
