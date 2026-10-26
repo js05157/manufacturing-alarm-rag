@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1420" height="1140" viewBox="0 0 1420 1140" role="img" aria-labelledby="title desc">
+<title id="title">Manufacturing Alarm RAG ERD</title><desc id="desc">SQLite의 documents, records, alarms, alarm_records, alarm_items, symptoms, metadata 7개 테이블과 5개 외래 키 관계. Chroma는 별도 저장소이다.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">원문과 출처를 보존하는 데이터 구조</text>
+<text x="44" y="99" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#536781" text-anchor="start">SQLite 7개 테이블  ·  실제 스키마 기준  ·  연결선은 1:N 관계</text>
+<g data-fk="records.document_sha256" data-references="documents.sha256">
+<polyline points="460,240 540,240" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="475" y="230" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="19" font-weight="700" fill="#536781" text-anchor="start">1 : N</text>
+</g>
+<g data-fk="symptoms.document_sha256" data-references="documents.sha256">
+<polyline points="255,320 255,490" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="272" y="411" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="19" font-weight="700" fill="#536781" text-anchor="start">1 : N</text>
+</g>
+<g data-fk="alarm_items.record_id" data-references="records.record_id">
+<polyline points="765,362 765,490" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="782" y="429" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="19" font-weight="700" fill="#536781" text-anchor="start">1 : N</text>
+</g>
+<g data-fk="alarm_records.record_id" data-references="records.record_id">
+<polyline points="990,290 1010,290 1010,580 1030,580" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="993" y="276" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="700" fill="#536781" text-anchor="start">1</text>
+<text x="1014" y="566" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="700" fill="#536781" text-anchor="start">N</text>
+</g>
+<g data-fk="alarm_records.code" data-references="alarms.code">
+<polyline points="1195,362 1195,490" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1212" y="429" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="19" font-weight="700" fill="#536781" text-anchor="start">1 : N</text>
+</g>
+<g id="table-documents" data-table="documents">
+<rect x="50" y="150" width="410" height="200" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="51" y="151" width="408" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="72" y="188" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#087F8C" text-anchor="start">documents</text>
+<g data-column="sha256" data-pk="true" data-is-fk="false">
+<text x="68" y="244" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="139" y="245" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">sha256</text>
+<text x="443" y="243" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="filename" data-pk="false" data-is-fk="false">
+<text x="68" y="286" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="139" y="287" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">filename</text>
+<text x="443" y="285" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="70" y="334" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">원본 PDF 식별</text>
+</g>
+<g id="table-records" data-table="records">
+<rect x="540" y="150" width="450" height="242" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="541" y="151" width="448" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="562" y="188" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#087F8C" text-anchor="start">records</text>
+<g data-column="record_id" data-pk="true" data-is-fk="false">
+<text x="558" y="244" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="629" y="245" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">record_id</text>
+<text x="973" y="243" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="document_sha256" data-pk="false" data-is-fk="true">
+<text x="558" y="286" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#7C3AED" text-anchor="start">FK</text>
+<text x="629" y="287" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">document_sha256</text>
+<text x="973" y="285" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="payload" data-pk="false" data-is-fk="false">
+<text x="558" y="328" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="629" y="329" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">payload</text>
+<text x="973" y="327" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="560" y="376" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">payload: 원문·페이지·좌표 JSON</text>
+</g>
+<g id="table-alarms" data-table="alarms">
+<rect x="1030" y="150" width="330" height="242" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="1031" y="151" width="328" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="1052" y="188" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#2563EB" text-anchor="start">alarms</text>
+<g data-column="code" data-pk="true" data-is-fk="false">
+<text x="1048" y="244" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="1119" y="245" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">code</text>
+<text x="1343" y="243" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="name" data-pk="false" data-is-fk="false">
+<text x="1048" y="286" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="1119" y="287" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">name</text>
+<text x="1343" y="285" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="classification" data-pk="false" data-is-fk="false">
+<text x="1048" y="328" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="1119" y="329" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">classification</text>
+<text x="1343" y="327" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="1050" y="376" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">고유 조작 패널 코드</text>
+</g>
+<g id="table-symptoms" data-table="symptoms">
+<rect x="50" y="490" width="410" height="242" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="51" y="491" width="408" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="72" y="528" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#087F8C" text-anchor="start">symptoms</text>
+<g data-column="section" data-pk="true" data-is-fk="false">
+<text x="68" y="584" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="139" y="585" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">section</text>
+<text x="443" y="583" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="document_sha256" data-pk="false" data-is-fk="true">
+<text x="68" y="626" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#7C3AED" text-anchor="start">FK</text>
+<text x="139" y="627" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">document_sha256</text>
+<text x="443" y="625" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="payload" data-pk="false" data-is-fk="false">
+<text x="68" y="668" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="139" y="669" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">payload</text>
+<text x="443" y="667" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="70" y="716" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">payload: 원인·대책 원본 행 JSON</text>
+</g>
+<g id="table-alarm_items" data-table="alarm_items">
+<rect x="540" y="490" width="450" height="326" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="541" y="491" width="448" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="562" y="528" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#2563EB" text-anchor="start">alarm_items</text>
+<g data-column="record_id" data-pk="true" data-is-fk="true">
+<text x="558" y="584" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#7C3AED" text-anchor="start">PK/FK</text>
+<text x="629" y="585" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">record_id</text>
+<text x="973" y="583" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="kind" data-pk="true" data-is-fk="false">
+<text x="558" y="626" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="629" y="627" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">kind</text>
+<text x="973" y="625" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="position" data-pk="true" data-is-fk="false">
+<text x="558" y="668" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="629" y="669" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">position</text>
+<text x="973" y="667" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">INT</text>
+</g>
+<g data-column="text" data-pk="false" data-is-fk="false">
+<text x="558" y="710" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="629" y="711" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">text</text>
+<text x="973" y="709" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="evidence" data-pk="false" data-is-fk="false">
+<text x="558" y="752" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="629" y="753" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">evidence</text>
+<text x="973" y="751" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="560" y="800" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">항목 순서 보존 · evidence: 좌표 JSON</text>
+</g>
+<g id="table-alarm_records" data-table="alarm_records">
+<rect x="1030" y="490" width="330" height="200" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="1031" y="491" width="328" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="1052" y="528" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#2563EB" text-anchor="start">alarm_records</text>
+<g data-column="code" data-pk="true" data-is-fk="true">
+<text x="1048" y="584" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#7C3AED" text-anchor="start">PK/FK</text>
+<text x="1119" y="585" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">code</text>
+<text x="1343" y="583" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="record_id" data-pk="true" data-is-fk="true">
+<text x="1048" y="626" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#7C3AED" text-anchor="start">PK/FK</text>
+<text x="1119" y="627" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">record_id</text>
+<text x="1343" y="625" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="1050" y="674" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">코드 ↔ 상세 레코드 연결</text>
+</g>
+<g id="table-metadata" data-table="metadata">
+<rect x="50" y="855" width="410" height="200" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
+<rect x="51" y="856" width="408" height="56" rx="15" fill="#EDF3FD" stroke="#EDF3FD" stroke-width="0"/>
+<text x="72" y="893" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="26" font-weight="700" fill="#536781" text-anchor="start">metadata</text>
+<g data-column="key" data-pk="true" data-is-fk="false">
+<text x="68" y="949" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="700" fill="#2563EB" text-anchor="start">PK</text>
+<text x="139" y="950" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">key</text>
+<text x="443" y="948" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<g data-column="value" data-pk="false" data-is-fk="false">
+<text x="68" y="991" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="17" font-weight="400" fill="#536781" text-anchor="start">·</text>
+<text x="139" y="992" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#172B4D" text-anchor="start">value</text>
+<text x="443" y="990" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="16" font-weight="400" fill="#536781" text-anchor="end">TEXT</text>
+</g>
+<text x="70" y="1039" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="18" font-weight="400" fill="#536781" text-anchor="start">독립 설정 테이블 · FK 없음</text>
+</g>
+<rect x="540" y="880" width="820" height="150" rx="16" fill="#F4F1FC" stroke="#DED5F6" stroke-width="1.5"/>
+<text x="566" y="922" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#7C3AED" text-anchor="start">ChromaDB  ·  SQLite 외부 저장소</text>
+<text x="566" y="962" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#536781" text-anchor="start">224 chunks · 384차원 · E5 임베딩</text>
+<text x="566" y="999" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">record_id 등 메타데이터로 근거 추적 · SQL 외래 키 없음</text>
+<text x="50" y="1110" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">PK: 기본키    FK: 외래 키    여러 PK 표시는 복합 기본키    JSON은 TEXT 필드에 저장</text>
+</svg>
