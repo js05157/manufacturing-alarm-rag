@@ -48,4 +48,3 @@ def cell_text(words, rect):
         lines.setdefault((w[5], w[6]), []).append(w)
     ordered = sorted(lines.values(), key=lambda ws: (round(min(w[1] for w in ws), 1), min(w[0] for w in ws)))
     return clean("\n".join(" ".join(w[4] for w in sorted(ws, key=lambda w: w[0])) for ws in ordered))
-

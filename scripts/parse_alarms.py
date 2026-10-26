@@ -75,35 +75,6 @@ def parse(extracted):
             if any(c == "ER1" for c, _ in anchors) and any(c == "ER4" for c, _ in anchors):
                 for n in (2, 3):
                     listing[f"ER{n}"] = {**listing["ER1"]}
-    # Keep the raw-row audit below disabled: it cannot safely separate crowded index rows.
-    for page in []:
-        for table in page["tables"]:
-            rows = table["rows"]
-            if not rows or "조작 패널 표시" not in (rows[0][0] or ""):
-                continue
-            previous_name, previous_ref = None, None
-            for ri, row in enumerate(rows[1:], 1):
-                panel = " ".join(s for s in row[:2] if s)
-                codes = CODE.findall(panel)
-                # Never infer how to separate a corrupt multi-code row.
-                if len(codes) != 1:
-                    issues.append({"stage": "listing", "table": table["id"], "row": ri, "reason": "code_count", "text": panel})
-                    continue
-                name_index = 2 if len(row) >= 4 else 1
-                name = compact(row[name_index]) or previous_name
-                ref = compact(row[-1]) or previous_ref
-                previous_name, previous_ref = name, ref
-                dc = compact(row[-2]) if len(row) == 5 else None
-                normalized = normalize_code(codes[0])
-                # Classification uses the printed section headings, not code spelling.
-                x, y = table["bbox"][:2]
-                categories = [l for l in page["lines"] if l["bbox"][1] < y
-                              and abs(l["bbox"][0]-x) < 25
-                              and any(c in l["text"] for c in ("에러 메시지", "경보", "경고장", "중고장", "기타 표시"))]
-                category = categories[-1]["text"].lstrip("◆■ \uf075") if categories else ("중고장" if page["pdf_page"] == 17 else None)
-                listing[normalized] = {"name": name, "classification": category, "data_code": dc,
-                                       "reference_page": ref,
-                                       "source": source(extracted, page, table["bbox"], table["id"], ri)}
     symptom_toc = [(title.split("\t", 1)[0], title.split("\t", 1)[-1], n)
                    for level, title, n in extracted["toc"] if level == 3 and title.startswith("2.6.")]
     symptom_index = -1
@@ -234,16 +205,21 @@ def parse(extracted):
         pn, table_y = origin["pdf_page"], origin["bbox"][1]
         for page in extracted["pages"][pn-1:pn+1]:
             headings = [l for l in page["lines"] if "■" in l["text"]]
+            stops = [l for l in page["lines"] if "■" in l["text"] or "◆" in l["text"] or compact(l["text"]).startswith("2.6")]
             if page["pdf_page"] == pn:
                 before = [l for l in headings if l["bbox"][1] < table_y]
                 low = before[-1]["bbox"][3] if before else table_y
-                following = [l for l in headings if l["bbox"][1] > table_y]
+                following = [l for l in stops if l["bbox"][1] > table_y and not any(t["bbox"][1] <= l["bbox"][1] <= t["bbox"][3] for t in page["tables"])]
                 high = following[0]["bbox"][1] if following else 785
             else:
                 # Only follow a footnote when the source description refers to it.
-                if not any(re.search(r"\*\d", i["text"]) for i in record["description"]):
+                markers = {m for i in record["description"] for m in re.findall(r"\*\d+", i["text"])}
+                if not markers:
                     continue
                 low, high = 35, headings[0]["bbox"][1] if headings else 35
+                prefix_text = " ".join(l["text"] for l in page["lines"] if low < l["bbox"][1] < high)
+                if not markers.intersection(re.findall(r"\*\d+", prefix_text)):
+                    continue
             for line in page["lines"]:
                 rect = line["bbox"]
                 cy = (rect[1]+rect[3])/2

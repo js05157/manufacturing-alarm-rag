@@ -43,6 +43,10 @@ def test_source_specific_ranges_and_variants(local_dataset):
     assert dc["E.OC2"]["value"] == "17 (H11)"
     assert dc["OLV"]["value"] == "2 (H02)"
     assert dc["E.OA"]["consistent"] is False
+    fan = next(r for r in records if r["codes"] == ["FN"])
+    assert not any("중고장" in i["text"] for i in fan["notes"])
+    oc1 = next(r for r in records if r["codes"] == ["E.OC1"])
+    assert all(i["evidence"][0]["pdf_page"] == 23 for i in oc1["notes"])
 
 
 def test_sqlite_rebuild_and_exact_lookup(tmp_path, local_dataset):
@@ -72,4 +76,3 @@ def test_modified_item_fails_source_verification(local_dataset):
     result = verify(data, Settings().pdf)
     assert result["accepted"] == []
     assert "source mismatch" in str(result["rejected"])
-
