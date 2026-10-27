@@ -23,7 +23,7 @@
 <table>
   <tr><th align="center">구분</th><th align="center">기술 스택</th></tr>
   <tr><td align="center">Frontend</td><td align="center"><img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&amp;logo=streamlit&amp;logoColor=white" alt="Streamlit" height="27"> <img src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&amp;logo=css&amp;logoColor=white" alt="CSS" height="27"></td></tr>
-  <tr><td align="center">Backend</td><td align="center"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python" height="27"> <img src="https://img.shields.io/badge/Requests-2D6E8D?style=for-the-badge" alt="Requests" height="27"></td></tr>
+  <tr><td align="center">Backend</td><td align="center"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python" height="27"></td></tr>
   <tr><td align="center">Document Processing</td><td align="center"><img src="https://img.shields.io/badge/PyMuPDF-4A3B75?style=for-the-badge" alt="PyMuPDF" height="27"></td></tr>
   <tr><td align="center">RAG &amp; Storage</td><td align="center"><img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&amp;logo=sqlite&amp;logoColor=white" alt="SQLite" height="27"> <img src="https://img.shields.io/badge/ChromaDB-E65B45?style=for-the-badge" alt="ChromaDB" height="27"></td></tr>
   <tr><td align="center">Embedding</td><td align="center"><img src="https://img.shields.io/badge/Sentence%20Transformers-4051B5?style=for-the-badge" alt="Sentence Transformers" height="27"> <img src="https://img.shields.io/badge/multilingual--e5--small-3B6F99?style=for-the-badge" alt="multilingual-e5-small" height="27"></td></tr>
@@ -56,10 +56,13 @@
 
 | 항목 | 결과 |
 |---|---|
+| 검색 Hit@1 | 70% (7/10) |
 | 검색 Hit@3 | 90% (9/10) |
-| 자동 테스트 | 데이터·검색·API·대화 상태·UI 등 136개 통과 |
+| 자동 테스트 | 전체 136개 중 136개 통과 · 실패 0개 · 건너뜀 0개 |
 | 실제 모델 추론 | Qwen3 4B의 로컬 CPU 추론, 후속 질문 처리, 원문 인용·출처 검증 확인 |
 
-Hit@3는 40문항 평가 세트 중 정답 코드가 있는 자연어 질의 10개를 대상으로 산출했다. 코드 없는 증상 질의 5개는 제외했으며, 전체 40문항의 LLM 답변 정답률은 미측정 상태다.
+검색 지표는 40문항 평가 세트 중 정답 코드가 있는 자연어 질의 10개를 대상으로 산출했다. 코드 후보의 중복을 제거한 뒤, 1위 적중 여부를 Hit@1로, 상위 3개 내 포함 여부를 Hit@3로 계산했다. 코드 없는 증상 질의 5개는 제외했다.
 
-[검색 평가 기록](evaluation/local_llm/chat_regression/REPORT.md) · [로컬 LLM·대화 맥락 검증](evaluation/CHAT_CONTEXT_REPORT.md)
+자동 테스트는 데이터·검색·API 예외 처리·대화 상태·UI 동작을 검사하며, 모의 LLM 검사를 포함한다. 전체 40문항의 실제 LLM 답변 정답률은 아직 평가하지 않았다. 검색 관련성 개선, 독립 평가 세트 확보, 다회차 대화 품질과 CPU 추론 지연의 반복 측정은 후속 과제로 남아 있다.
+
+[평가 범위와 미완료 항목](evaluation/EVALUATION_AUDIT.md) · [검색 평가 기록](evaluation/local_llm/chat_regression/REPORT.md) · [로컬 LLM·대화 맥락 검증](evaluation/CHAT_CONTEXT_REPORT.md)
