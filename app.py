@@ -6,10 +6,10 @@ import streamlit as st
 from config import Settings
 from rag.chat_store import ChatStore
 from rag.pipeline import RAGService
+from ui import apply_styles, header, sidebar_brand, source_card, welcome
 
-st.set_page_config(page_title="Manufacturing Alarm RAG", page_icon="⚙️", layout="centered")
-st.title("Manufacturing Alarm RAG")
-st.caption("FR-E800 인버터 · 제조사 보수 매뉴얼에 근거한 알람·증상 확인")
+st.set_page_config(page_title="Manufacturing Alarm RAG", page_icon="⚙️", layout="wide", initial_sidebar_state="auto")
+apply_styles()
 
 
 @st.cache_resource
@@ -24,22 +24,27 @@ try:
     if settings.chat_db.resolve() == settings.sqlite.resolve():
         raise ValueError("CHAT_DB_PATH는 매뉴얼 SQLITE_PATH와 다른 파일이어야 합니다.")
     chats = ChatStore(settings.chat_db)
-    rooms = chats.rooms()
+    rooms = chats.rooms(include_empty=False)
     # Preserve conversations already displayed by the previous app version.
     if "active_chat_id" not in st.session_state and st.session_state.get("messages"):
         migrated = chats.create_room()
         for message in st.session_state.messages:
             chats.append(migrated, message["role"], message["content"], message.get("metadata"))
         st.session_state.active_chat_id = migrated
-        rooms = chats.rooms()
+        rooms = chats.rooms(include_empty=False)
     room_ids = {room["id"] for room in rooms}
-    if st.session_state.get("active_chat_id") not in room_ids:
+    if "active_chat_id" not in st.session_state:
         requested = st.query_params.get("chat")
-        st.session_state.active_chat_id = requested if requested in room_ids else rooms[0]["id"] if rooms else chats.create_room()
-        rooms = chats.rooms()
+        st.session_state.active_chat_id = requested if requested in room_ids else None
+    elif st.session_state.active_chat_id not in room_ids:
+        st.session_state.active_chat_id = None
     active_id = st.session_state.active_chat_id
-    st.query_params["chat"] = active_id
-    messages = chats.messages(active_id)
+    if active_id:
+        st.query_params["chat"] = active_id
+    elif "chat" in st.query_params:
+        del st.query_params["chat"]
+    messages = chats.messages(active_id) if active_id else []
+    st.session_state.setdefault("draft_nonce", 0)
 except (OSError, sqlite3.Error, ValueError):
     st.error("대화 저장소를 열 수 없습니다. CHAT_DB_PATH가 매뉴얼 DB와 분리되어 있고 쓰기 가능한 경로인지 확인해 주세요.")
     st.stop()
@@ -51,12 +56,23 @@ def select_chat(room_id):
 
 
 def new_chat():
-    select_chat(chats.create_room())
+    # A draft is a screen, not a saved room. Persist only on the first send.
+    st.session_state.active_chat_id = None
+    st.session_state.messages = []
+    st.session_state.draft_nonce += 1
+    st.session_state.pop("pending_prompt", None)
+    if "chat" in st.query_params:
+        del st.query_params["chat"]
+
+
+def queue_prompt(question):
+    st.session_state.pending_prompt = question
 
 
 def display_message(message):
     metadata = message.get("metadata", {})
-    with st.chat_message(message["role"]):
+    avatar = ":material/hub:" if message["role"] == "assistant" else None
+    with st.chat_message(message["role"], avatar=avatar):
         if metadata.get("error"):
             st.error(message["content"])
         else:
@@ -69,36 +85,50 @@ def display_message(message):
             st.caption(f"로컬 모델 생성 {metadata['local_llm']['inference_seconds']:.2f}초")
 
 
-with st.sidebar:
-    st.subheader("채팅")
-    st.button("＋ 새 채팅", key="new_chat", on_click=new_chat, use_container_width=True)
-    for room in rooms:
-        st.button(room["title"], key=f"chat_{room['id']}",
-                  type="primary" if room["id"] == active_id else "secondary",
-                  on_click=select_chat, args=(room["id"],), use_container_width=True)
-    st.caption("대화는 이 PC에 저장됩니다. 맥락은 채팅방별로 분리됩니다.")
-    st.divider()
-    st.subheader("매뉴얼 안내")
-    st.write("미쓰비시전기 FR-E800 시리즈 취급설명서(보수편)")
-    st.write("조작 패널의 표시 코드를 입력하거나, 발생한 증상을 설명해 주세요.")
-    st.caption("PDF 쪽수는 파일의 실제 페이지입니다. 문서 쪽수는 하단에 인쇄된 번호입니다.")
-    if evidence_only:
-        st.info("원문 검색 모드: LLM을 사용하지 않고 매뉴얼 근거를 정리합니다.")
-    elif settings.llm_backend == "local":
-        st.info("로컬 Qwen3 답변 생성 · 외부 LLM API 전송 없음")
-    st.caption("실제 조작·점검은 설비의 안전 절차와 제조사 매뉴얼을 따라 주세요.")
-
-st.session_state.messages = messages
-for message in messages:
-    display_message(message)
-
-question = st.chat_input("예: E.OC1의 원인과 대처 방법 / 모터 시동이 걸리지 않아요")
+question = st.chat_input("알람 코드나 설비 증상을 입력하세요", key=f"prompt_{active_id or 'draft'}_{st.session_state.draft_nonce}")
+question = question or st.session_state.pop("pending_prompt", None)
 if question:
     try:
+        if not active_id:
+            active_id = chats.create_room()
+            st.session_state.active_chat_id = active_id
+            st.query_params["chat"] = active_id
         chats.append(active_id, "user", question)
+        rooms = chats.rooms(include_empty=False)
     except (OSError, sqlite3.Error, ValueError):
         st.error("질문을 저장하지 못했습니다. 대화 저장소의 경로와 쓰기 권한을 확인해 주세요.")
         st.stop()
+
+with st.sidebar:
+    sidebar_brand()
+    st.button("새 채팅", icon=":material/add:", key="new_chat", on_click=new_chat, width="stretch")
+    st.html('<div class="recent-label">최근 대화</div>')
+    with st.container(key="chat_history"):
+        for room in rooms:
+            st.button(room["title"], key=f"chat_{room['id']}", icon=":material/chat_bubble_outline:",
+                      type="primary" if room["id"] == active_id else "secondary",
+                      on_click=select_chat, args=(room["id"],), width="stretch")
+        if not rooms:
+            st.caption("첫 대화를 시작해 보세요.")
+    with st.container(key="sidebar_footer"):
+        source_card()
+        with st.expander("출처·이용 안내"):
+            st.caption("FR-E800 시리즈 취급설명서(보수편)에 근거합니다. PDF 쪽수는 파일의 실제 페이지, 문서 쪽수는 인쇄된 번호입니다.")
+            st.caption("대화는 이 PC에 저장되며, 채팅방별로 맥락이 분리됩니다.")
+            if evidence_only:
+                st.caption("원문 검색 모드 · LLM 생성 없이 매뉴얼 근거를 정리합니다.")
+            st.caption("실제 점검·조작은 설비의 안전 절차와 제조사 매뉴얼에 따라 수행하세요.")
+
+title = next((room["title"] for room in rooms if room["id"] == active_id), None)
+header(title)
+st.session_state.messages = messages
+if not messages and not question:
+    welcome(queue_prompt)
+else:
+    for message in messages:
+        display_message(message)
+
+if question:
     display_message({"role": "user", "content": question})
     with st.chat_message("assistant"):
         try:

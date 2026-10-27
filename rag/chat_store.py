@@ -45,9 +45,10 @@ class ChatStore:
             db.execute("INSERT INTO chat_rooms VALUES (?,?,?,?)", (room_id, "새 채팅", now, now))
         return room_id
 
-    def rooms(self):
+    def rooms(self, *, include_empty=True):
         with self.connection() as db:
-            return [dict(row) for row in db.execute("SELECT * FROM chat_rooms ORDER BY updated_at DESC, id")]
+            condition = "" if include_empty else " WHERE EXISTS (SELECT 1 FROM chat_messages m WHERE m.room_id=chat_rooms.id)"
+            return [dict(row) for row in db.execute("SELECT * FROM chat_rooms"+condition+" ORDER BY updated_at DESC, id")]
 
     def messages(self, room_id):
         with self.connection() as db:

@@ -43,3 +43,12 @@ def test_invalid_message_or_missing_room_never_creates_partial_records(tmp_path)
     with pytest.raises(ValueError, match="채팅방"):
         store.append("missing", "user", "test")
     assert store.messages(room) == []
+
+
+def test_nonempty_room_listing_hides_empty_rows_without_deleting_them(tmp_path):
+    store = ChatStore(tmp_path/"chats.db")
+    empty, started = store.create_room(), store.create_room()
+    assert store.rooms(include_empty=False) == []
+    store.append(started, "user", "E.OC1 원인")
+    assert [room["id"] for room in store.rooms(include_empty=False)] == [started]
+    assert {room["id"] for room in store.rooms()} == {empty, started}
