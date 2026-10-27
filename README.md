@@ -19,6 +19,7 @@
 | 알람 코드 검색 | `E.OC1의 원인과 대처 방법` → SQLite 정확 검색 |
 | 자연어 증상 검색 | `모터 시동이 걸리지 않아` → E5 + Chroma 의미 검색 |
 | 근거 기반 답변 | 로컬 Qwen3가 원문 근거를 선택하고, 프로그램이 필수 항목·순서·출처를 검증 |
+| 채팅방·대화 맥락 | 왼쪽에서 새 채팅·이전 방 선택, 같은 방의 알람·증상에 대한 후속 질문 지원 |
 
 **64페이지 · 고유 알람 코드 88개 · 상세 레코드 75개 · 증상 유형 14개 · 검색 청크 224개**
 
@@ -32,7 +33,7 @@ PDF 추출·검증·임베딩은 사전에 수행합니다. 질문 처리 시에
 
 ![SQLite 테이블 관계와 Chroma 저장소](docs/images/erd.png)
 
-SQLite는 알람 코드·상세 원문·항목 순서·출처를 보존합니다. `payload`와 `evidence`는 JSON을 담은 TEXT 필드이며, Chroma는 별도 벡터 저장소입니다. [스키마 코드](scripts/build_sqlite.py) · [편집 가능한 그림 원본](docs/images/erd.svg)
+위 그림은 매뉴얼 DB의 구조입니다. SQLite는 알람 코드·상세 원문·항목 순서·출처를 보존합니다. `payload`와 `evidence`는 JSON을 담은 TEXT 필드이며, Chroma는 별도 벡터 저장소입니다. 채팅방·메시지는 별도 `storage/chats.db`에 저장합니다. [스키마 코드](scripts/build_sqlite.py) · [그림 원본](docs/images/erd.svg)
 
 ## 기술 스택
 
@@ -54,7 +55,7 @@ Windows PowerShell 기준입니다. 처음 실행한다면 **[설치·PDF/모델
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
 
 # 2. Streamlit 실행
-.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
 ```
 
 **[채팅 열기](http://127.0.0.1:8501)** · [모델 서버 상태](http://127.0.0.1:8080/health)
@@ -67,16 +68,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
 |---|---|
 | 검색 Hit@3 | **90% (9/10)** — 정답 코드가 있는 자연어 질문 기준 |
 | 실제 Qwen3 추론 | 단독 한국어 생성 및 RAG 연결 확인 |
-| 로컬 RAG 평균 응답 시간 | **12.22초** — LLM을 호출한 5개 사례 |
+| 실제 후속 질문 응답 시간 | **23.08초** — E.THT 맥락을 이어받은 1회 실측 |
 | 전체 40문항 LLM 답변 정답률 | **미측정** |
 
-검색 평가는 40문항 중 코드 정답이 있는 자연어 질문 10개를 대상으로 하며, 코드 없는 증상 질문 5개는 Hit@3에서 제외합니다. 응답 시간은 CPU 추론, 모델·E5 예열 및 서버 prompt/KV 캐시 사용 상태의 단일 실행 결과입니다. 모델 최초 로딩과 브라우저 렌더링은 제외했습니다.
+검색 평가는 40문항 중 코드 정답이 있는 자연어 질문 10개를 대상으로 하며, 코드 없는 증상 질문 5개는 Hit@3에서 제외합니다. 시간은 CPU에서 모델을 미리 로드한 후속 질문 1회 실측입니다. 입력 길이·prompt/KV 캐시·동시 작업에 따라 달라지며, 최초 로딩과 브라우저 렌더링은 제외했습니다.
 
-[검색 회귀 보고서](evaluation/local_llm/intent_regression/REPORT.md) · [실제 로컬 LLM 검증](evaluation/local_llm/REPORT.md) · [테스트 실행 방법](docs/SETUP.md#테스트와-평가)
+[검색 회귀 보고서](evaluation/local_llm/chat_regression/REPORT.md) · [실제 LLM·채팅 검증](evaluation/CHAT_CONTEXT_REPORT.md) · [테스트 실행 방법](docs/SETUP.md#테스트와-평가)
 
 ## 데이터 및 지원 범위
 
 - **FR-E800 보수편만 적재**합니다. 답변에 등장하는 기능편은 보수편에 기재된 참고 문헌이며, 기능편 원문을 검색하는 것은 아닙니다.
 - 원본 PDF·추출 데이터·DB·인덱스·모델·`.env`는 저장소에 포함하지 않습니다. 모델 가중치는 프로젝트 외부에서 관리합니다.
-- 대화 기록은 현재 세션에 표시합니다. 각 질문은 독립적으로 처리하므로 이전 질문의 문맥을 이어받지 않습니다.
+- 왼쪽의 **새 채팅**으로 방을 만들고, 이전 방을 눌러 대화를 이어갑니다. 기록은 이 PC에 저장되어 새로고침·서버 재시작 후에도 복원됩니다.
+- 같은 방에서 `E.OC1 원인` → `그럼 대처는?`처럼 질문할 수 있습니다. 새 알람 코드·새 증상은 우선하고, 대상이 모호하면 확인을 요청합니다. 이전 대화 자체를 매뉴얼 근거로 사용하지 않습니다.
 - 문서에 없는 내용은 확인 불가로 안내합니다. 실제 점검·조작에는 해당 설비의 안전 절차와 제조사 매뉴얼을 적용하세요.

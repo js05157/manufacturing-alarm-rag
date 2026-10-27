@@ -61,6 +61,7 @@ LOCAL_LLM_TEMPERATURE=0.2
 | 텍스트·표·셀 좌표와 검증 기록 | `data/processed/` |
 | 원문·코드·증상 SQLite | `storage/alarms.db` |
 | Chroma 인덱스와 manifest | `storage/chroma/` |
+| 채팅방·메시지 (매뉴얼 DB와 분리) | `storage/chats.db` · `CHAT_DB_PATH`로 변경 가능 |
 | E5 모델 캐시 | `.cache/huggingface/` |
 
 임베딩은 `intfloat/multilingual-e5-small`의 `query:` / `passage:` 규칙을 사용합니다. 구축 시 모델 revision·문서 해시를 manifest에 고정하며, 조회 시 불일치하면 검색을 중단합니다. 검증 실패 항목은 기록하고 적재하지 않습니다.
@@ -69,7 +70,7 @@ LOCAL_LLM_TEMPERATURE=0.2
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
-.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
 ```
 
 [채팅 화면](http://127.0.0.1:8501) · [LLM 상태](http://127.0.0.1:8080/health)
@@ -83,6 +84,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1 -Che
 시작 옵션은 `--ctx-size 4096 --gpu-layers 0 --parallel 1 --batch-size 512 --ubatch-size 128 --jinja --reasoning off --no-context-shift`입니다. 스레드는 물리 코어 수와 6 중 작은 값을 기본으로 사용하며 `-Threads`로 조정할 수 있습니다. 시작 로그는 Git에서 제외된 `logs/`에 남습니다.
 
 질문 예시: `E.OC1의 원인과 대처 방법`, `E.THT가 가감속 시간 때문일 수 있어?`, `모터 시동이 걸리지 않아`.
+
+왼쪽의 **새 채팅**으로 방을 생성하고, 첫 질문으로 자동 지정된 제목을 클릭해 이전 방으로 돌아갑니다. 채팅방별 메시지·응답 시간·후속 질문 맥락이 로컬 SQLite에 저장되며 새로고침과 서버 재시작 후에도 유지됩니다. URL의 `chat` 값으로 열었던 방을 다시 선택합니다. 별도의 계정 기능은 없으며 이 PC의 로컬 서비스에서 저장한 채팅방 목록을 사용합니다.
+
+`E.OC1 원인` 다음에 `그럼 대처는?`라고 물으면 같은 알람을 다시 검색합니다. 알람 코드·증상과 최근 후속 조건을 제한된 길이로 이어받고, 이전 답변 문장은 검색·LLM의 기술적 근거에 포함하지 않습니다. 증상 후속 질문은 원래 증상으로 검색해 관련도 순위를 유지하고, 현재 질문과 최근 조건을 LLM에 전달합니다. 명시한 새 코드가 우선이며, 여러 코드 중 대상이 불분명하면 코드를 요청합니다. 이 맥락 해석은 규칙 기반이므로 모호한 표현은 알람 코드나 증상을 다시 적어 주세요.
 
 ## 답변 생성 방식
 
@@ -108,7 +113,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1 -Che
 .\.venv\Scripts\python.exe -m evaluation.validate_local
 ```
 
-원본 데이터가 없는 환경에서는 일부 원문 통합 검사가 건너뛰어집니다. 모의 테스트 통과, 검색 Hit@3, 실제 LLM 답변 정답률은 서로 다른 지표입니다. [초기 평가](../evaluation/REPORT.md), [로컬 통합 검증](../evaluation/local_llm/REPORT.md), [의도 분기 후 검색 회귀](../evaluation/local_llm/intent_regression/REPORT.md)를 구분해 확인하세요.
+원본 데이터가 없는 환경에서는 일부 원문 통합 검사가 건너뛰어집니다. 모의 테스트 통과, 검색 Hit@3, 실제 LLM 답변 정답률은 서로 다른 지표입니다. [초기 평가](../evaluation/REPORT.md), [로컬 통합 검증](../evaluation/local_llm/REPORT.md), [채팅·맥락 검증](../evaluation/CHAT_CONTEXT_REPORT.md), [최신 검색 회귀](../evaluation/local_llm/chat_regression/REPORT.md)를 구분해 확인하세요.
 
 전체 40문항 로컬 LLM 생성 평가는 아직 미실행입니다. 필요하면 `evaluation.evaluate --mode llm --repeats 1 --output-dir evaluation/local_llm/full`로 실행하고, 질문과 원문을 대조한 수동 검토까지 완료한 뒤 정답률을 확정합니다.
 

@@ -19,6 +19,7 @@ class Settings:
     pdf: Path = path_env("PDF_PATH", "data/raw/E800매뉴얼_보수편.pdf")
     sqlite: Path = path_env("SQLITE_PATH", "storage/alarms.db")
     chroma: Path = path_env("CHROMA_PATH", "storage/chroma")
+    chat_db: Path = path_env("CHAT_DB_PATH", "storage/chats.db")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
     embedding_revision: str | None = os.getenv("EMBEDDING_REVISION") or None
     llm_backend: str = os.getenv("LLM_BACKEND", "local")

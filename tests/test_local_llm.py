@@ -210,7 +210,7 @@ def test_local_failure_never_falls_back_to_external_api(monkeypatch):
         raise LocalLLMError("local unavailable")
     monkeypatch.setattr(AnswerGenerator, "generate", external)
     monkeypatch.setattr(LocalAnswerGenerator, "generate", local)
-    service = RAGService(replace(Settings(), llm_backend="local"), sqlite=object())
+    service = RAGService(replace(Settings(), llm_backend="local"), sqlite=SimpleNamespace(codes=lambda: set()))
     service.retrieve = lambda _: source_fixture()
     with pytest.raises(LocalLLMError, match="local unavailable"):
         service.answer("question")

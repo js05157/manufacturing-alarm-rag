@@ -3,6 +3,7 @@ from functools import cached_property
 from time import perf_counter
 
 from config import Settings
+from rag.conversation import resolve_question
 from rag.router import DIRECT_REPLIES, route
 from rag.sqlite_retriever import SQLiteRetriever
 from rag.vector_retriever import VectorRetriever
@@ -33,7 +34,7 @@ class RAGService:
             raise ValueError("SQLite와 Chroma의 원본 PDF가 다릅니다. 두 저장소를 함께 재구축하세요.")
         return vector
 
-    def retrieve(self, question):
+    def retrieve(self, question, search_question=None):
         if not question.strip():
             raise ValueError("질문을 입력해 주세요.")
         decision = route(question, self.sqlite.codes())
@@ -53,7 +54,7 @@ class RAGService:
             # Exact records already contain the complete context and footnotes;
             # this also answers mixed questions without cross-code contamination.
             return result
-        result.hits = self.vector.search(question, k=self.settings.top_k, max_distance=self.settings.max_distance)
+        result.hits = self.vector.search(search_question or question, k=self.settings.top_k, max_distance=self.settings.max_distance)
         for hit in result.hits:
             metadata = hit["metadata"]
             if metadata.get("error_code"):
@@ -71,13 +72,20 @@ class RAGService:
                             result.symptom_rows.append({"name": symptom["name"], "section": symptom["section"], **row})
         return result
 
-    def answer(self, question, evidence_only=False):
+    def answer(self, question, evidence_only=False, history=None):
         started = perf_counter()
-        retrieval = self.retrieve(question)
+        resolved = resolve_question(question, history, self.sqlite.codes())
+        if resolved.clarification:
+            retrieval = Retrieval(question, "clarification")
+        elif resolved.search_query:
+            retrieval = self.retrieve(resolved.query, search_question=resolved.search_query)
+        else:
+            retrieval = self.retrieve(resolved.query)
         if retrieval.route in DIRECT_REPLIES:
-            return {"status": "guidance", "text": DIRECT_REPLIES[retrieval.route], "evidence_ids": [],
+            return {"status": "guidance", "text": resolved.clarification or DIRECT_REPLIES[retrieval.route], "evidence_ids": [],
                     "highlights": [], "mode": "direct", "validation": {"valid": True, "reason": "non-retrieval guidance"},
-                    "elapsed_seconds": perf_counter()-started, "retrieval": asdict(retrieval)}
+                    "elapsed_seconds": perf_counter()-started, "retrieval": asdict(retrieval),
+                    "context_used": False, "conversation_context": {}}
         if self._generator:
             generator = self._generator
         elif self.settings.llm_backend in ("local", "evidence_only"):
@@ -92,4 +100,7 @@ class RAGService:
         answer = generator.generate(retrieval, evidence_only=evidence_only)
         answer["elapsed_seconds"] = perf_counter()-started
         answer["retrieval"] = asdict(retrieval)
+        answer["original_question"] = question
+        answer["context_used"] = resolved.used
+        answer["conversation_context"] = resolved.context
         return answer

@@ -19,6 +19,9 @@ evaluation/results.csv
 evaluation/review.json
 *.pdf
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite3
 *.gguf
 evaluation/local_llm/**/*.json

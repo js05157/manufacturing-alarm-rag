@@ -2,6 +2,15 @@ from config import ROOT, Settings
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_chats(monkeypatch, tmp_path):
+    from dataclasses import replace
+    import config
+    settings = replace(Settings(), chat_db=tmp_path/"chats.db")
+    monkeypatch.setattr(config, "Settings", lambda: settings)
+    return settings
+
+
 def test_chat_session_and_unknown_code():
     if not Settings().sqlite.exists():
         pytest.skip("Local corpus not built")
@@ -30,7 +39,7 @@ def test_local_server_failure_keeps_app_and_history_alive(monkeypatch):
     assert "start_llm.ps1" in app.error[0].value
     app.run()
     assert not app.exception and len(app.chat_message) == 2
-    assert "start_llm.ps1" in app.chat_message[1].markdown[0].value
+    assert "start_llm.ps1" in app.chat_message[1].error[0].value
 
 
 def test_greeting_does_not_show_maintenance_instructions_or_llm_timing(monkeypatch):
@@ -46,3 +55,72 @@ def test_greeting_does_not_show_maintenance_instructions_or_llm_timing(monkeypat
     assert "도우미" in text and "FR-E800" in text
     assert "Pr.22" not in text and "PDF" not in text
     assert not any("로컬 모델 생성" in caption.value for caption in app.caption)
+
+
+def test_room_creation_switching_history_isolation_and_page_reload(monkeypatch, isolated_chats):
+    from streamlit.testing.v1 import AppTest
+    from rag.pipeline import RAGService
+    from rag.chat_store import ChatStore
+    original = RAGService.answer
+    calls = []
+
+    def evidence_answer(self, question, evidence_only=False, history=None):
+        answer = original(self, question, evidence_only=True, history=history)
+        calls.append(answer)
+        return answer
+
+    monkeypatch.setattr(RAGService, "answer", evidence_answer)
+    app = AppTest.from_file(str(ROOT/"app.py"), default_timeout=30).run()
+    app.chat_input[0].set_value("E.OC1 원인").run()
+    first = app.session_state["active_chat_id"]
+    assert not app.exception and len(app.chat_message) == 2
+    app.button(key="new_chat").click().run()
+    second = app.session_state["active_chat_id"]
+    assert second != first and not app.chat_message
+    app.chat_input[0].set_value("그럼 대처는?").run()
+    assert calls[-1]["mode"] == "direct"  # No leakage from room one.
+    app.chat_input[0].set_value("E.OV1 원인").run()
+    app.chat_input[0].set_value("그럼 대처는?").run()
+    assert calls[-1]["retrieval"]["codes"] == ["E.OV1"]
+    app.button(key=f"chat_{first}").click().run()
+    assert len(app.chat_message) == 2 and app.chat_message[0].markdown[0].value == "E.OC1 원인"
+    app.chat_input[0].set_value("그럼 대처는?").run()
+    assert calls[-1]["retrieval"]["codes"] == ["E.OC1"]
+    assert any("이전 질문 맥락" in caption.value for caption in app.caption)
+    assert not app.exception and not app.error
+    saved = ChatStore(isolated_chats.chat_db)
+    assert len(saved.rooms()) == 2 and len(saved.messages(first)) == 4 and len(saved.messages(second)) == 6
+    reload = AppTest.from_file(str(ROOT/"app.py"), default_timeout=30)
+    reload.query_params["chat"] = first
+    reload.run()
+    assert not reload.exception and len(reload.chat_message) == 4
+    assert reload.session_state["active_chat_id"] == first
+    assert reload.button(key=f"chat_{first}").label == "E.OC1 원인"
+
+
+def test_previous_session_messages_are_migrated_once(isolated_chats):
+    from streamlit.testing.v1 import AppTest
+    from rag.chat_store import ChatStore
+    app = AppTest.from_file(str(ROOT/"app.py"), default_timeout=30)
+    app.session_state["messages"] = [{"role":"user", "content":"E.THT 원인"}, {"role":"assistant", "content":"기존 대화"}]
+    app.run()
+    app.run()
+    store = ChatStore(isolated_chats.chat_db)
+    assert not app.exception and len(app.chat_message) == 2
+    assert len(store.rooms()) == 1
+    assert len(store.messages(app.session_state["active_chat_id"])) == 2
+
+
+def test_chat_storage_cannot_write_into_manual_database(monkeypatch, tmp_path, isolated_chats):
+    from dataclasses import replace
+    import config
+    from streamlit.testing.v1 import AppTest
+    manual = tmp_path/"manual.db"
+    sentinel = b"manual must remain unchanged"
+    manual.write_bytes(sentinel)
+    settings = replace(isolated_chats, sqlite=manual, chat_db=manual)
+    monkeypatch.setattr(config, "Settings", lambda:settings)
+    app = AppTest.from_file(str(ROOT/"app.py"), default_timeout=30).run()
+    assert not app.exception and app.error
+    assert "CHAT_DB_PATH" in app.error[0].value
+    assert manual.read_bytes() == sentinel
