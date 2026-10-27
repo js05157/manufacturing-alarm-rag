@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1080" viewBox="0 0 1400 1080" role="img" aria-labelledby="title desc">
 <title id="title">Manufacturing Alarm RAG 아키텍처</title><desc id="desc">PDF 사전 구축과 질문 처리 분리. 코드 질문은 SQLite, 증상 질문은 E5와 Chroma 검색. 근거를 로컬 Qwen3로 전달하고 원문과 페이지를 검증해 Streamlit에 표시한다.</desc>
 <rect width="100%" height="100%" fill="white"/>
-<text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">문서에서 근거를 찾고, 로컬에서 답합니다</text>
+<text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">시스템 아키텍처</text>
 <text x="44" y="99" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#536781" text-anchor="start">FR-E800 보수편  ·  정확 코드 검색 + 자연어 증상 검색</text>
 <rect x="26" y="132" width="1348" height="224" rx="22" fill="#F6F8FC" stroke="#D9E2EF" stroke-width="1.5"/>
 <text x="50" y="174" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="24" font-weight="700" fill="#172B4D" text-anchor="start">01  데이터 사전 구축</text>

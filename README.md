@@ -1,86 +1,65 @@
-<h1 align="center">⚙️ Manufacturing Alarm RAG</h1>
-<p align="center"><b>알람 코드와 증상으로 찾는 FR-E800 매뉴얼 도우미</b><br>제조사 원문 검색 · 페이지 근거 검증 · 로컬 Qwen3 답변</p>
+<h1 align="center">Manufacturing Alarm RAG</h1>
+<p align="center">제조설비 알람 분석을 위한 로컬 RAG 질의응답 시스템</p>
 
 <p align="center">
-  <a href="#프로젝트-소개">소개</a> ·
+  <a href="#프로젝트-개요">프로젝트 개요</a> ·
+  <a href="#기술-스택">기술 스택</a> ·
+  <a href="#주요-구현">주요 구현</a> ·
   <a href="#시스템-아키텍처">아키텍처</a> ·
   <a href="#erd">ERD</a> ·
-  <a href="#기술-스택">기술 스택</a> ·
-  <a href="#실행-방법">실행 방법</a> ·
   <a href="#검증-결과">검증 결과</a>
 </p>
 
-## 프로젝트 소개
+## 프로젝트 개요
 
-미쓰비시전기 **FR-E800 취급설명서(보수편)**에서 알람의 원인·점검 항목·대처 방법을 찾아주는 RAG 서비스입니다. 검색한 원문을 바탕으로 한국어 답변과 **매뉴얼명·PDF 페이지·문서 내부 페이지**를 제공합니다.
+미쓰비시전기 FR-E800 인버터의 알람 코드와 운전 증상을 제조사 보수 매뉴얼에서 검색하는 로컬 RAG 질의응답 시스템이다. 알람의 원인·점검 항목·대처 방법을 조회하고, 답변에 원문 근거와 페이지 출처를 제공한다.
 
-![채팅 서비스 화면](docs/images/chat-home.png)
+코드 한 글자의 차이로 점검 대상이 달라지는 설비 알람의 특성을 고려해 코드 일치 검색과 증상 의미 검색을 분리했다. 보수편 PDF 64페이지에서 고유 코드 88개, 알람 상세 레코드 75개, 증상 유형 14개를 구조화하고 224개 청크로 검색 인덱스를 구축했다.
 
-| 핵심 기능 | 동작 |
-|---|---|
-| 알람 코드 검색 | `E.OC1의 원인과 대처 방법` → SQLite 정확 검색 |
-| 자연어 증상 검색 | `모터 시동이 걸리지 않아` → E5 + Chroma 의미 검색 |
-| 근거 기반 답변 | 로컬 Qwen3가 원문 근거를 선택하고, 프로그램이 필수 항목·순서·출처를 검증 |
-| 채팅방·대화 맥락 | 왼쪽에서 새 채팅·이전 방 선택, 같은 방의 알람·증상에 대한 후속 질문 지원 |
-
-**64페이지 · 고유 알람 코드 88개 · 상세 레코드 75개 · 증상 유형 14개 · 검색 청크 224개**
-
-## 시스템 아키텍처
-
-![Manufacturing Alarm RAG 시스템 아키텍처](docs/images/architecture.png)
-
-PDF 추출·검증·임베딩은 사전에 수행합니다. 질문 처리 시에는 기존 저장소를 검색하며, 로컬 LLM이 선택한 근거를 원문과 대조한 뒤 표시합니다. 인사·서비스 소개는 검색과 LLM 호출 없이 안내합니다. [그림 원본](docs/images/architecture.svg)
-
-## ERD
-
-![SQLite 테이블 관계와 Chroma 저장소](docs/images/erd.png)
-
-위 그림은 매뉴얼 DB의 구조입니다. SQLite는 알람 코드·상세 원문·항목 순서·출처를 보존합니다. `payload`와 `evidence`는 JSON을 담은 TEXT 필드이며, Chroma는 별도 벡터 저장소입니다. 채팅방·메시지는 별도 `storage/chats.db`에 저장합니다. [스키마 코드](scripts/build_sqlite.py) · [그림 원본](docs/images/erd.svg)
+![서비스 화면](docs/images/chat-home.png)
 
 ## 기술 스택
 
-| 영역 | 기술 |
+<table>
+  <tr><th align="center">구분</th><th align="center">기술 스택</th></tr>
+  <tr><td align="center">Frontend</td><td align="center"><img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&amp;logo=streamlit&amp;logoColor=white" alt="Streamlit" height="27"> <img src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&amp;logo=css&amp;logoColor=white" alt="CSS" height="27"></td></tr>
+  <tr><td align="center">Backend</td><td align="center"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python" height="27"> <img src="https://img.shields.io/badge/Requests-2D6E8D?style=for-the-badge" alt="Requests" height="27"></td></tr>
+  <tr><td align="center">Document Processing</td><td align="center"><img src="https://img.shields.io/badge/PyMuPDF-4A3B75?style=for-the-badge" alt="PyMuPDF" height="27"></td></tr>
+  <tr><td align="center">RAG &amp; Storage</td><td align="center"><img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&amp;logo=sqlite&amp;logoColor=white" alt="SQLite" height="27"> <img src="https://img.shields.io/badge/ChromaDB-E65B45?style=for-the-badge" alt="ChromaDB" height="27"></td></tr>
+  <tr><td align="center">Embedding</td><td align="center"><img src="https://img.shields.io/badge/Sentence%20Transformers-4051B5?style=for-the-badge" alt="Sentence Transformers" height="27"> <img src="https://img.shields.io/badge/multilingual--e5--small-3B6F99?style=for-the-badge" alt="multilingual-e5-small" height="27"></td></tr>
+  <tr><td align="center">LLM</td><td align="center"><img src="https://img.shields.io/badge/Qwen3%204B-6F42C1?style=for-the-badge" alt="Qwen3 4B" height="27"> <img src="https://img.shields.io/badge/llama.cpp-181717?style=for-the-badge" alt="llama.cpp" height="27"> <img src="https://img.shields.io/badge/GGUF%20%2F%20Q4__K__M-455A64?style=for-the-badge" alt="GGUF / Q4_K_M" height="27"></td></tr>
+  <tr><td align="center">Test &amp; Tools</td><td align="center"><img src="https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&amp;logo=pytest&amp;logoColor=white" alt="pytest" height="27"> <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&amp;logo=git&amp;logoColor=white" alt="Git" height="27"> <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="GitHub" height="27"></td></tr>
+</table>
+
+## 주요 구현
+
+| 구현 항목 | 내용 |
 |---|---|
-| 화면 | Streamlit |
-| 문서 처리 | PyMuPDF · 원문/셀 좌표 검증 |
-| 검색 저장소 | SQLite · ChromaDB |
-| 임베딩 | multilingual-e5-small · 384차원 · `query:` / `passage:` |
-| 로컬 LLM | Qwen3 4B Q4_K_M · llama.cpp · requests |
-| 개발·검증 | Python 3.11 · pytest · 40문항 평가 세트 |
+| PDF 표 구조 복원 | 셀 좌표와 단어 위치를 기준으로 원인·점검·대처 항목을 추출하고, PDF 실제 페이지와 문서 내부 페이지를 구분해 저장했다. |
+| 코드·증상 검색 분리 | 알람 코드는 SQLite에서 일치 검색하고, 코드 없는 증상은 E5 임베딩과 ChromaDB로 검색했다. 청크는 알람별 원문 항목과 증상 표의 행 단위로 구성했다. |
+| 답변 검증 | Qwen3가 선택한 근거 ID와 인용을 원문에 대조했다. 필수 점검·대처 항목, 원문 순서, 매뉴얼명과 페이지 출처를 프로그램에서 검증했다. |
+| 대화 상태 관리 | 채팅방별 알람·증상 맥락을 기준으로 후속 질의를 보완하고, 대화 기록을 별도 SQLite DB에 저장했다. |
 
-## 실행 방법
+## 시스템 아키텍처
 
-Windows PowerShell 기준입니다. 처음 실행한다면 **[설치·PDF/모델 준비·데이터 구축](docs/SETUP.md)**을 먼저 진행하세요. 구축된 DB와 인덱스가 있으면 재사용합니다.
+![시스템 아키텍처](docs/images/architecture.png)
 
-```powershell
-# 1. 로컬 LLM 서버 시작 (127.0.0.1:8080, CPU)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1
+문서 구축과 질의 처리를 분리했다. 검증된 원문을 SQLite에 저장하고, 같은 문서의 E5 임베딩을 ChromaDB에 적재했다. 답변 생성에는 llama.cpp 서버와 Qwen3 4B Q4_K_M을 사용했다.
 
-# 2. Streamlit 실행
-.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
-```
+## ERD
 
-**[채팅 열기](http://127.0.0.1:8501)** · [모델 서버 상태](http://127.0.0.1:8080/health)
+![매뉴얼 데이터 ERD](docs/images/erd.png)
 
-기본 로컬 구성은 외부 LLM API나 API 키를 사용하지 않습니다. 서버가 꺼져 있으면 화면에 시작 방법을 안내합니다.
+알람 코드와 상세 레코드를 다대다로 연결하고, 점검·대처 항목의 순서와 좌표 근거를 보존했다. 대화 기록은 매뉴얼 DB와 분리해 관리했다.
 
 ## 검증 결과
 
-| 지표 | 실제 측정 결과 |
+| 항목 | 결과 |
 |---|---|
-| 검색 Hit@3 | **90% (9/10)** — 정답 코드가 있는 자연어 질문 기준 |
-| 실제 Qwen3 추론 | 단독 한국어 생성 및 RAG 연결 확인 |
-| 실제 후속 질문 응답 시간 | **23.08초** — E.THT 맥락을 이어받은 1회 실측 |
-| 전체 40문항 LLM 답변 정답률 | **미측정** |
+| 검색 Hit@3 | 90% (9/10) |
+| 자동 테스트 | 데이터·검색·API·대화 상태·UI 등 136개 통과 |
+| 실제 모델 추론 | Qwen3 4B의 로컬 CPU 추론, 후속 질문 처리, 원문 인용·출처 검증 확인 |
 
-검색 평가는 40문항 중 코드 정답이 있는 자연어 질문 10개를 대상으로 하며, 코드 없는 증상 질문 5개는 Hit@3에서 제외합니다. 시간은 CPU에서 모델을 미리 로드한 후속 질문 1회 실측입니다. 입력 길이·prompt/KV 캐시·동시 작업에 따라 달라지며, 최초 로딩과 브라우저 렌더링은 제외했습니다.
+Hit@3는 40문항 평가 세트 중 정답 코드가 있는 자연어 질의 10개를 대상으로 산출했다. 코드 없는 증상 질의 5개는 제외했으며, 전체 40문항의 LLM 답변 정답률은 미측정 상태다.
 
-[검색 회귀 보고서](evaluation/local_llm/chat_regression/REPORT.md) · [실제 LLM·채팅 검증](evaluation/CHAT_CONTEXT_REPORT.md) · [테스트 실행 방법](docs/SETUP.md#테스트와-평가)
-
-## 데이터 및 지원 범위
-
-- **FR-E800 보수편만 적재**합니다. 답변에 등장하는 기능편은 보수편에 기재된 참고 문헌이며, 기능편 원문을 검색하는 것은 아닙니다.
-- 원본 PDF·추출 데이터·DB·인덱스·모델·`.env`는 저장소에 포함하지 않습니다. 모델 가중치는 프로젝트 외부에서 관리합니다.
-- **새 채팅**은 빈 대화 화면으로 이동하며, 첫 질문을 보내면 목록에 저장됩니다. 왼쪽에서 이전 방을 눌러 이어갈 수 있고, 새로고침·서버 재시작 후에도 기록이 복원됩니다.
-- 같은 방에서 `E.OC1 원인` → `그럼 대처는?`처럼 질문할 수 있습니다. 새 알람 코드·새 증상은 우선하고, 대상이 모호하면 확인을 요청합니다. 이전 대화 자체를 매뉴얼 근거로 사용하지 않습니다.
-- 문서에 없는 내용은 확인 불가로 안내합니다. 실제 점검·조작에는 해당 설비의 안전 절차와 제조사 매뉴얼을 적용하세요.
+[검색 평가 기록](evaluation/local_llm/chat_regression/REPORT.md) · [로컬 LLM·대화 맥락 검증](evaluation/CHAT_CONTEXT_REPORT.md)

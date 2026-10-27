@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1420" height="1140" viewBox="0 0 1420 1140" role="img" aria-labelledby="title desc">
 <title id="title">Manufacturing Alarm RAG ERD</title><desc id="desc">SQLite의 documents, records, alarms, alarm_records, alarm_items, symptoms, metadata 7개 테이블과 5개 외래 키 관계. Chroma는 별도 저장소이다.</desc>
 <rect width="100%" height="100%" fill="white"/>
-<text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">원문과 출처를 보존하는 데이터 구조</text>
+<text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">매뉴얼 데이터 ERD</text>
 <text x="44" y="99" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#536781" text-anchor="start">SQLite 7개 테이블  ·  실제 스키마 기준  ·  연결선은 1:N 관계</text>
 <g data-fk="records.document_sha256" data-references="documents.sha256">
 <polyline points="460,240 540,240" fill="none" stroke="#8296B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
