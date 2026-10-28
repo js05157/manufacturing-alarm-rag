@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1080" viewBox="0 0 1400 1080" role="img" aria-labelledby="title desc">
-<title id="title">Manufacturing Alarm RAG 아키텍처</title><desc id="desc">PDF 사전 구축과 질문 처리 분리. 코드 질문은 SQLite, 증상 질문은 E5와 Chroma 검색. 근거를 로컬 Qwen3로 전달하고 원문과 페이지를 검증해 Streamlit에 표시한다.</desc>
+<title id="title">Manufacturing Alarm RAG 아키텍처</title><desc id="desc">PDF 사전 구축과 질문 처리 분리. 코드 질문은 SQLite, 증상 질문은 E5와 BM25 순위 결합 검색. 근거를 로컬 Qwen3로 전달하고 원문과 페이지를 검증해 Streamlit에 표시한다.</desc>
 <rect width="100%" height="100%" fill="white"/>
 <text x="42" y="60" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="34" font-weight="700" fill="#172B4D" text-anchor="start">시스템 아키텍처</text>
 <text x="44" y="99" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="21" font-weight="400" fill="#536781" text-anchor="start">FR-E800 보수편  ·  정확 코드 검색 + 자연어 증상 검색</text>
@@ -65,14 +65,14 @@
 <text x="687" y="584" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">전체 상세 원문 조회</text>
 <rect x="650" y="644" width="270" height="120" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
 <rect x="668" y="664" width="5" height="80" rx="2" fill="#087F8C" stroke="#087F8C" stroke-width="0"/>
-<text x="687" y="685" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#087F8C" text-anchor="start">E5 + Chroma</text>
-<text x="687" y="719" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">query: · 자연어 증상</text>
-<text x="687" y="748" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">Top 3 · 거리 ≤ 0.30</text>
+<text x="687" y="685" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#087F8C" text-anchor="start">E5 · BM25 · RRF</text>
+<text x="687" y="719" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">Chroma · 본문·제목</text>
+<text x="687" y="748" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">운전 구간 · 상위 근거</text>
 <rect x="1000" y="555" width="300" height="120" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
 <rect x="1018" y="575" width="5" height="80" rx="2" fill="#2563EB" stroke="#2563EB" stroke-width="0"/>
 <text x="1037" y="596" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#2563EB" text-anchor="start">검색 근거 구성</text>
-<text x="1037" y="630" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">순위 · 출처 유지</text>
-<text x="1037" y="659" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">필요시 코드 상세 보완</text>
+<text x="1037" y="630" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">동일 알람 · 증상 선별</text>
+<text x="1037" y="659" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">모호한 코드는 재질문</text>
 <rect x="1000" y="882" width="300" height="124" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
 <rect x="1018" y="902" width="5" height="84" rx="2" fill="#7C3AED" stroke="#7C3AED" stroke-width="0"/>
 <text x="1037" y="923" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#7C3AED" text-anchor="start">로컬 Qwen3 4B</text>
@@ -81,7 +81,7 @@
 <rect x="650" y="882" width="270" height="124" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
 <rect x="668" y="902" width="5" height="84" rx="2" fill="#2563EB" stroke="#2563EB" stroke-width="0"/>
 <text x="687" y="923" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="25" font-weight="700" fill="#2563EB" text-anchor="start">근거·항목 검증</text>
-<text x="687" y="957" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">원문 인용 · 필수 목록</text>
+<text x="687" y="957" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">ID → 원문 · 필수 목록</text>
 <text x="687" y="986" font-family="Malgun Gothic, 맑은 고딕, sans-serif" font-size="20" font-weight="400" fill="#536781" text-anchor="start">출처 · 순서 확인</text>
 <rect x="50" y="882" width="540" height="124" rx="16" fill="white" stroke="#D9E2EF" stroke-width="1.5"/>
 <rect x="68" y="902" width="5" height="84" rx="2" fill="#2563EB" stroke="#2563EB" stroke-width="0"/>

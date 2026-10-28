@@ -91,9 +91,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1 -Che
 
 ## 답변 생성 방식
 
-코드 질문은 SQLite 정확 검색, 코드 없는 기술 증상은 E5·Chroma 상위 3개 검색을 사용합니다. 인사·서비스 소개·범위 밖 질문은 먼저 안내합니다. 미등록 코드를 유사 코드로 대체하지 않습니다.
+코드 질문은 SQLite 정확 검색을 사용합니다. 코드 없는 기술 증상은 기존 E5·Chroma 검색과 본문·제목 BM25 순위를 RRF로 결합하고, 운전 구간과 설비 대상을 확인해 상위 근거 3개를 선택합니다. 같은 명칭의 코드가 여러 개이거나 운전 구간이 불분명하면 표시 코드와 구간을 요청합니다. 인사·서비스 소개·범위 밖 질문은 먼저 안내합니다. 미등록 코드를 유사 코드로 대체하지 않습니다.
 
-로컬 Qwen은 한국어 원문 근거의 ID와 전체 인용을 선택합니다. 프로그램이 인용을 원문과 대조하고 필수 점검·대처를 원래 순서로 보완하며 매뉴얼명과 실제/인쇄 페이지를 검증합니다. 자유로운 진단보다 원문 보존을 우선합니다.
+로컬 Qwen은 한국어 원문 근거의 ID를 최대 2개 선택합니다. 프로그램이 해당 ID의 전체 원문을 복원하고 필수 점검·대처를 원래 순서로 보완하며 매뉴얼명과 실제/인쇄 페이지를 검증합니다. 모델이 원문을 다시 생성하지 않아도 조건과 필수 목록은 그대로 보존됩니다. 자유로운 진단보다 원문 보존을 우선합니다.
 
 서버의 실제 토크나이저로 `프롬프트 + 생성 상한 512 + 여유 96 ≤ 4096`을 확인합니다. 원문 항목 전체를 유지한 채 요청을 나누며, 단일 항목 자체가 한도를 넘으면 잘라내지 않고 오류로 처리합니다. `/no_think`와 `enable_thinking=false`를 적용합니다.
 
@@ -115,7 +115,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_llm.ps1 -Che
 
 원본 데이터가 없는 환경에서는 일부 원문 통합 검사가 건너뛰어집니다. 모의 테스트 통과, 검색 Hit@3, 실제 LLM 답변 정답률은 서로 다른 지표입니다. [초기 평가](../evaluation/REPORT.md), [로컬 통합 검증](../evaluation/local_llm/REPORT.md), [채팅·맥락 검증](../evaluation/CHAT_CONTEXT_REPORT.md), [최신 검색 회귀](../evaluation/local_llm/chat_regression/REPORT.md)를 구분해 확인하세요.
 
-전체 40문항 로컬 LLM 생성 평가는 아직 미실행입니다. 필요하면 `evaluation.evaluate --mode llm --repeats 1 --output-dir evaluation/local_llm/full`로 실행하고, 질문과 원문을 대조한 수동 검토까지 완료한 뒤 정답률을 확정합니다.
+최신 검색 비교·실제 추론 평가·실패 사례는 [검색·답변 검증 개선](../evaluation/IMPROVEMENT_REPORT.md)에 별도로 기록합니다. 전체 답변은 원문 대량 재배포를 피하기 위해 로컬 JSON에 보존합니다.
+
+```powershell
+# 기존 40문항, 실제 로컬 Qwen 추론 (LLM_BACKEND=local 설정)
+.\.venv\Scripts\python.exe -m evaluation.evaluate --mode llm --output-dir evaluation/local_llm/recheck
+
+# 추가 작성 25문항을 원본 평가 파일과 분리
+.\.venv\Scripts\python.exe -m evaluation.prepare_dataset --additional --output evaluation/local_llm/additional/questions.json
+.\.venv\Scripts\python.exe -m evaluation.evaluate --mode llm --dataset evaluation/local_llm/additional/questions.json --output-dir evaluation/local_llm/additional/run
+
+# 임시 채팅 DB를 사용하는 다회차 검증, 유형별 3회 반복 측정
+.\.venv\Scripts\python.exe -m evaluation.validate_improvements --mode conversation
+.\.venv\Scripts\python.exe -m evaluation.validate_improvements --mode latency --repeats 3
+```
+
+평가 출력 디렉터리는 실행별로 분리합니다. `checkpoint.json`은 각 문항 완료 시 기록합니다. LLM 응답은 검토 대기 상태로 저장되며 `review.json`의 `approved`와 `answer_fingerprint`를 대조해 `--rescore --review 경로`로 채점합니다. 프로그램 검사를 통과하지 못한 답변은 검토 승인만으로 정답 처리하지 않습니다. 실제 추론 평가는 서버의 단일 슬롯을 사용하므로 동시에 실행하지 않습니다.
 
 ## 데이터 해석 시 주의점
 
