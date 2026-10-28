@@ -26,4 +26,5 @@ evaluation/review.json
 *.gguf
 evaluation/local_llm/**/*.json
 evaluation/local_llm/**/*.csv
+evaluation/local_llm/improved/
 .cache/

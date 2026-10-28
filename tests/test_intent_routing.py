@@ -72,7 +72,7 @@ def test_insufficient_symptom_evidence_does_not_emit_retrieved_procedures():
 
 def test_local_model_abstention_reaches_final_answer_without_procedures():
     client = SimpleNamespace(context_limit=4096, count_tokens=lambda _: 100,
-        complete=lambda *args, **kwargs: SimpleNamespace(content=json.dumps({"status": "insufficient", "highlights": []}),
+        complete=lambda *args, **kwargs: SimpleNamespace(content=json.dumps({"status": "insufficient", "evidence_ids": []}),
                                                          prompt_tokens=100, completion_tokens=10, context_limit=4096, elapsed_seconds=.01))
     answer = LocalAnswerGenerator(Settings(), client).generate(unsupported_fixture())
     assert answer["status"] == "insufficient" and answer["validation"]["valid"]

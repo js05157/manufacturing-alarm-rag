@@ -48,7 +48,10 @@ class ChatStore:
     def rooms(self, *, include_empty=True):
         with self.connection() as db:
             condition = "" if include_empty else " WHERE EXISTS (SELECT 1 FROM chat_messages m WHERE m.room_id=chat_rooms.id)"
-            return [dict(row) for row in db.execute("SELECT * FROM chat_rooms"+condition+" ORDER BY updated_at DESC, id")]
+            # Windows clock resolution can give separate writes equal times.
+            # Message sequence preserves recency instead of random UUID order.
+            order = " ORDER BY updated_at DESC, (SELECT MAX(m.id) FROM chat_messages m WHERE m.room_id=chat_rooms.id) DESC, rowid DESC"
+            return [dict(row) for row in db.execute("SELECT * FROM chat_rooms"+condition+order)]
 
     def messages(self, room_id):
         with self.connection() as db:

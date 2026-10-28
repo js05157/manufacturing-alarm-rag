@@ -52,3 +52,18 @@ def test_nonempty_room_listing_hides_empty_rows_without_deleting_them(tmp_path):
     store.append(started, "user", "E.OC1 원인")
     assert [room["id"] for room in store.rooms(include_empty=False)] == [started]
     assert {room["id"] for room in store.rooms()} == {empty, started}
+
+
+def test_equal_timestamps_use_message_sequence_for_room_recency(monkeypatch, tmp_path):
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    import rag.chat_store as module
+    fixed=datetime(2026,10,28,tzinfo=timezone.utc)
+    monkeypatch.setattr(module,"datetime",SimpleNamespace(now=lambda _:fixed))
+    store=ChatStore(tmp_path/"chats.db")
+    a,b=store.create_room(),store.create_room()
+    store.append(a,"user","first")
+    store.append(b,"user","second")
+    assert [r["id"] for r in store.rooms()] == [b,a]
+    store.append(a,"assistant","latest")
+    assert [r["id"] for r in store.rooms()] == [a,b]

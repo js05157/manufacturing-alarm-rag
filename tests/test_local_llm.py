@@ -156,8 +156,8 @@ class BatchingClient:
     def complete(self, messages, schema):
         self.calls.append(messages)
         entries = json.loads(messages[1]["content"])["evidence"]
-        highlights = [{"evidence_id": e["id"], "quote": e["text"]} for e in reversed(entries)]
-        return Completion(json.dumps({"status": "evidence", "highlights": highlights}), .01, self.count_tokens(messages), 50, 1000)
+        identifiers = [e["id"] for e in reversed(entries)]
+        return Completion(json.dumps({"status": "evidence", "evidence_ids": identifiers}), .01, self.count_tokens(messages), 50, 1000)
 
 
 def test_batches_preserve_whole_facts_order_and_source_pages():

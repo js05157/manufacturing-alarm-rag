@@ -15,7 +15,8 @@ EQUIPMENT = re.compile(r"인버터|설비|모터|전동기|fr[\s-]?e800|e800", r
 SYMPTOM = re.compile(
     r"시동|기동|구동|회전|가감속|가속|감속|토크|주파수|전류|전압|과부하|발열|과열|서멀|서미스터|"
     r"냉각팬|이상음|소음|진동|배선|단자|절연|결상|지락|누전|접지|회생|브레이크|"
-    r"파라미터|운전모드|입력신호|제어회로|조작패널|캐리어|이더넷|ethernet|modbus|cc-link|plg|pid|pwm|pr\.\d", re.I)
+    r"파라미터|운전모드|입력신호|제어회로|조작패널|캐리어|이더넷|ethernet|modbus|cc-link|plg|pid|pwm|pr\.\d|"
+    r"재시도|부하|정전|전원|프리런|아날로그|IP\s*주소|네트워크|기판|기억소자|통신|커넥터|교신", re.I)
 
 
 def non_code_intent(question):
@@ -56,7 +57,8 @@ def route(question, known_codes):
     for code in known_codes:
         if code.startswith("E.") or code.startswith("ER"):
             continue
-        pattern = r"(?<![A-Za-z0-9/])"+re.escape(code)+r"(?![A-Za-z0-9/])"
+        # A warning code such as EHR is not a second match inside E.EHR.
+        pattern = r"(?<![A-Za-z0-9/.])"+re.escape(code)+r"(?![A-Za-z0-9/.])"
         for match in re.finditer(pattern, question, re.I):
             if code == "IP" and not re.match(r"\s*(알람|코드|경보|발생|표시)", question[match.end():]):
                 continue

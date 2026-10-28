@@ -6,7 +6,7 @@ from config import Settings
 from rag.conversation import resolve_question
 from rag.router import DIRECT_REPLIES, route
 from rag.sqlite_retriever import SQLiteRetriever
-from rag.vector_retriever import VectorRetriever
+from rag.vector_retriever import VectorRetriever, select_evidence, unique_code_ranking
 
 
 @dataclass
@@ -18,6 +18,8 @@ class Retrieval:
     records: list = field(default_factory=list)
     symptom_rows: list = field(default_factory=list)
     hits: list = field(default_factory=list)
+    candidate_codes: list = field(default_factory=list)
+    clarification: str = ""
 
 
 class RAGService:
@@ -54,7 +56,13 @@ class RAGService:
             # Exact records already contain the complete context and footnotes;
             # this also answers mixed questions without cross-code contamination.
             return result
-        result.hits = self.vector.search(search_question or question, k=self.settings.top_k, max_distance=self.settings.max_distance)
+        query = search_question or question
+        candidates = self.vector.search(query, k=self.vector.collection.count(), max_distance=self.settings.max_distance)
+        result.candidate_codes = unique_code_ranking(candidates)
+        result.hits, result.clarification = select_evidence(candidates, query, self.settings.top_k)
+        if result.clarification:
+            result.route = "clarification"
+            return result
         for hit in result.hits:
             metadata = hit["metadata"]
             if metadata.get("error_code"):
@@ -82,10 +90,10 @@ class RAGService:
         else:
             retrieval = self.retrieve(resolved.query)
         if retrieval.route in DIRECT_REPLIES:
-            return {"status": "guidance", "text": resolved.clarification or DIRECT_REPLIES[retrieval.route], "evidence_ids": [],
+            return {"status": "guidance", "text": resolved.clarification or retrieval.clarification or DIRECT_REPLIES[retrieval.route], "evidence_ids": [],
                     "highlights": [], "mode": "direct", "validation": {"valid": True, "reason": "non-retrieval guidance"},
                     "elapsed_seconds": perf_counter()-started, "retrieval": asdict(retrieval),
-                    "context_used": False, "conversation_context": {}}
+                    "context_used": resolved.used, "conversation_context": resolved.context if retrieval.clarification else {}}
         if self._generator:
             generator = self._generator
         elif self.settings.llm_backend in ("local", "evidence_only"):

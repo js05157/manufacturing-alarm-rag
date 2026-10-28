@@ -12,8 +12,8 @@ LOCAL_SYSTEM_PROMPT = """당신은 FR-E800 제조설비 매뉴얼의 한국어 �
 질문에 직접 관련된 원문 항목을 최대 2개 고르세요. 원인, 체크 포인트, 대처를 혼동하지 마세요.
 시간·온도·배선 등 구체적인 조건을 묻는 질문은 그 조건이 포함된 체크 포인트와 대처를 우선 선택하고 일반적인 알람 설명으로 대체하지 마세요.
 사용자 추측을 진단으로 확정하지 말고, 질문의 조건을 확인할 근거가 없으면 insufficient로 답하세요.
-JSON만 반환하세요: {"status":"evidence" 또는 "insufficient","highlights":[{"evidence_id":"제공된 ID","quote":"해당 한국어 원문 전체"}]}.
-원문에 없는 설명을 추가하거나 문장의 조건·부정을 잘라내지 마세요. insufficient의 highlights는 빈 목록입니다.
+JSON만 반환하세요: {"status":"evidence" 또는 "insufficient","evidence_ids":["제공된 ID"]}.
+근거 ID만 최대 2개 선택하세요. 원문을 다시 쓰거나 설명을 생성하지 마세요. insufficient의 evidence_ids는 빈 목록입니다.
 문서명·페이지는 제공된 pages에만 근거합니다. 모든 필수 점검·대처·출처와 절차 순서는 시스템이 보완합니다.
 /no_think"""
 
@@ -39,13 +39,26 @@ def make_messages(question, units):
 
 
 def plan_schema(units):
-    # Literal ID/quote pairs prevent a small local model from altering a source
-    # condition while copying. The model still selects the relevant evidence.
-    alternatives = [{"type": "object", "properties": {"evidence_id": {"const": u["id"]}, "quote": {"const": u["text"]}},
-                     "required": ["evidence_id", "quote"], "additionalProperties": False} for u in units]
+    # The model selects IDs. The application restores the complete original
+    # quotation, preserving conditions while reducing CPU output tokens.
     return {"type": "object", "properties": {"status": {"type": "string", "enum": ["evidence", "insufficient"]},
-            "highlights": {"type": "array", "items": {"oneOf": alternatives}, "maxItems": 2}},
-            "required": ["status", "highlights"], "additionalProperties": False}
+            "evidence_ids": {"type": "array", "items": {"type": "string", "enum": [u["id"] for u in units]}, "maxItems": 2, "uniqueItems": True}},
+            "required": ["status", "evidence_ids"], "additionalProperties": False}
+
+
+def expand_selection(selection, units):
+    if not isinstance(selection, dict) or set(selection) != {"status", "evidence_ids"}:
+        raise LocalLLMError("로컬 LLM 근거 선택 응답의 필드가 올바르지 않습니다.")
+    identifiers = selection["evidence_ids"]
+    if not isinstance(identifiers, list) or len(identifiers) > 2 or any(not isinstance(i, str) or i not in units for i in identifiers):
+        raise LocalLLMError("로컬 LLM이 제공되지 않은 근거 ID를 선택했습니다.")
+    if len(set(identifiers)) != len(identifiers):
+        raise LocalLLMError("로컬 LLM이 중복된 근거 ID를 선택했습니다.")
+    plan = {"status": selection["status"], "highlights": [{"evidence_id": i, "quote": units[i]["text"]} for i in identifiers]}
+    valid, errors = validate_plan(plan, units)
+    if not valid:
+        raise LocalLLMError("로컬 LLM 근거 검증 실패: "+"; ".join(errors))
+    return plan
 
 
 class LocalAnswerGenerator:
@@ -55,6 +68,8 @@ class LocalAnswerGenerator:
 
     def batches(self, question, units, client):
         budget = client.context_limit-self.settings.local_llm_max_tokens-self.settings.local_llm_margin
+        if units and client.count_tokens(make_messages(question, units)) <= budget:
+            return [units]
         groups, pending = [], []
         for unit in units:
             if client.count_tokens(make_messages(question, pending+[unit])) <= budget:
@@ -83,12 +98,10 @@ class LocalAnswerGenerator:
             for group in groups:
                 response = client.complete(make_messages(retrieval.question, group), schema=plan_schema(group))
                 try:
-                    partial = json.loads(response.content)
+                    selection = json.loads(response.content)
                 except (ValueError, TypeError):
                     raise LocalLLMError("로컬 LLM의 답변 JSON이 올바르지 않습니다.") from None
-                valid, errors = validate_plan(partial, {u["id"]: u for u in group})
-                if not valid:
-                    raise LocalLLMError("로컬 LLM 근거 검증 실패: "+"; ".join(errors))
+                partial = expand_selection(selection, {u["id"]: u for u in group})
                 supported = supported or partial["status"] == "evidence"
                 for item in partial["highlights"]:
                     selected[item["evidence_id"]] = item

@@ -87,6 +87,12 @@ def test_ip_alarm_label_keeps_the_router_qualifier():
     assert route(answer.query, KNOWN).codes == ("IP",)
 
 
+def test_operating_phase_reply_keeps_symptom_context_and_updates_search():
+    messages=history("인버터가 과전류로 차단돼")
+    result=resolve_question("감속 중이야",messages,KNOWN)
+    assert result.used and "과전류" in result.search_query and "감속" in result.search_query
+
+
 def test_stateless_benchmark_questions_keep_original_retrieval_queries():
     for identifier, _, question, _ in CASES:
         result = resolve_question(question, [], KNOWN)

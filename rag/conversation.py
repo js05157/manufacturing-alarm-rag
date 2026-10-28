@@ -29,7 +29,11 @@ class ConversationQuestion:
 
 def _followup(text):
     compact = re.sub(r"\s+", "", text)
-    return not TOPIC_CHANGE.search(compact) and bool(FOLLOWUP.search(compact) or BARE_FOLLOWUP.fullmatch(compact))
+    return not TOPIC_CHANGE.search(compact) and bool(FOLLOWUP.search(compact) or BARE_FOLLOWUP.fullmatch(compact) or _phase_reply(compact))
+
+
+def _phase_reply(text):
+    return re.fullmatch(r"(?:가속|정속|감속|정지)(?:중|중에|할때)?(?:이야|예요|입니다|야)?[.!?~]*", text)
 
 
 def _context(question, codes=()):
@@ -107,4 +111,8 @@ def resolve_question(question, history, known_codes):
     query += "현재 질문: "+question
     context = {"codes": codes, "topic": subject["topic"] if len(codes) == len(subject["codes"]) else label,
                "followups": [*subject["followups"], question[:400]][-3:]}
-    return ConversationQuestion(query, context, used=True, search_query=subject["topic"] if not codes else "")
+    search_query = subject["topic"] if not codes else ""
+    if search_query and _phase_reply(compact):
+        search_query = re.sub(r"(?:가속|정속|감속|정지)(?:\s*중)?", "", search_query)+" "+question
+        context["topic"] = search_query[:600]
+    return ConversationQuestion(query, context, used=True, search_query=search_query)
