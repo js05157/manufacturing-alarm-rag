@@ -6,9 +6,9 @@ import streamlit as st
 from config import Settings
 from rag.chat_store import ChatStore
 from rag.pipeline import RAGService
-from ui import apply_styles, header, sidebar_brand, source_card, welcome
+from ui import apply_styles, header, sidebar_brand, source_card, welcome, saved_time
 
-st.set_page_config(page_title="Manufacturing Alarm RAG", page_icon="⚙️", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="설비 알람 분석", page_icon="⚙️", layout="wide", initial_sidebar_state="auto")
 apply_styles()
 
 
@@ -81,8 +81,6 @@ def display_message(message):
             st.caption("이 채팅방의 이전 질문 맥락을 반영했습니다.")
         if "elapsed_seconds" in metadata:
             st.caption(f"응답 시간 {metadata['elapsed_seconds']:.2f}초")
-        if metadata.get("local_llm", {}).get("batch_count"):
-            st.caption(f"로컬 모델 생성 {metadata['local_llm']['inference_seconds']:.2f}초")
 
 
 question = st.chat_input("알람 코드나 설비 증상을 입력하세요", key=f"prompt_{active_id or 'draft'}_{st.session_state.draft_nonce}")
@@ -101,18 +99,20 @@ if question:
 
 with st.sidebar:
     sidebar_brand()
-    st.button("새 채팅", icon=":material/add:", key="new_chat", on_click=new_chat, width="stretch")
-    st.html('<div class="recent-label">최근 대화</div>')
+    st.button("새 조회", icon=":material/add:", key="new_chat", on_click=new_chat, width="stretch")
+    st.html(f'<div class="recent-label">최근 대화<span>{len(rooms):02d}</span></div>')
     with st.container(key="chat_history"):
         for room in rooms:
-            st.button(room["title"], key=f"chat_{room['id']}", icon=":material/chat_bubble_outline:",
-                      type="primary" if room["id"] == active_id else "secondary",
-                      on_click=select_chat, args=(room["id"],), width="stretch")
+            with st.container(key=f"history_row_{room['id']}"):
+                st.button(room["title"], key=f"chat_{room['id']}", icon=":material/chat_bubble_outline:",
+                          type="primary" if room["id"] == active_id else "secondary",
+                          on_click=select_chat, args=(room["id"],), width="stretch")
+                st.caption(saved_time(room["updated_at"]))
         if not rooms:
-            st.caption("첫 대화를 시작해 보세요.")
+            st.caption("저장된 조회가 없습니다.")
     with st.container(key="sidebar_footer"):
         source_card()
-        with st.expander("출처·이용 안내"):
+        with st.expander("자료·보관 안내"):
             st.caption("FR-E800 시리즈 취급설명서(보수편)에 근거합니다. PDF 쪽수는 파일의 실제 페이지, 문서 쪽수는 인쇄된 번호입니다.")
             st.caption("대화는 이 PC에 저장되며, 채팅방별로 맥락이 분리됩니다.")
             if evidence_only:
