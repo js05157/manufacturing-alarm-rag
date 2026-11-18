@@ -20,6 +20,7 @@ class Settings:
     sqlite: Path = path_env("SQLITE_PATH", "storage/alarms.db")
     chroma: Path = path_env("CHROMA_PATH", "storage/chroma")
     chat_db: Path = path_env("CHAT_DB_PATH", "storage/chats.db")
+    planner_db: Path = path_env("PLANNER_DB_PATH", "storage/planner.db")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
     embedding_revision: str | None = os.getenv("EMBEDDING_REVISION") or None
     llm_backend: str = os.getenv("LLM_BACKEND", "local")
@@ -40,6 +41,12 @@ class Settings:
     llm_token_parameter: str = os.getenv("LLM_TOKEN_PARAMETER", "max_completion_tokens")
     top_k: int = int(os.getenv("TOP_K", "3"))
     max_distance: float = float(os.getenv("MAX_DISTANCE", "0.30"))
+    planner_api_timeout: float = float(os.getenv("PLANNER_API_TIMEOUT", "15"))
+    planner_max_replans: int = int(os.getenv("PLANNER_MAX_REPLANS", "3"))
+    planner_user_agent: str = os.getenv(
+        "PLANNER_USER_AGENT",
+        "manufacturing-alarm-rag/3.0 github.com/js05157/manufacturing-alarm-rag",
+    )
 
 
 os.environ.setdefault("HF_HOME", str(path_env("HF_HOME", ".cache/huggingface")))

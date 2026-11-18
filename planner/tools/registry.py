@@ -5,6 +5,7 @@ from collections.abc import Iterable
 
 from planner.tools.base import Tool, ToolResult
 from planner.tools.external import HolidayTool, LocationSearchTool, WeatherForecastTool
+from planner.tools.rag import ManualSearchTool
 
 
 class ToolRegistry:
@@ -31,15 +32,18 @@ class ToolRegistry:
         return tool.invoke(**arguments)
 
 
-def build_tool_registry(*, sessions=None, timeout=15.0, user_agent=None) -> ToolRegistry:
+def build_tool_registry(
+    *, sessions=None, timeout=15.0, user_agent=None, include_rag=False, rag_service=None, settings=None
+) -> ToolRegistry:
     sessions = sessions or {}
     weather_kwargs = {"session": sessions.get("weather"), "timeout": timeout}
     if user_agent:
         weather_kwargs["user_agent"] = user_agent
-    return ToolRegistry(
-        [
+    tools = [
             LocationSearchTool(session=sessions.get("location"), timeout=timeout),
             WeatherForecastTool(**weather_kwargs),
             HolidayTool(session=sessions.get("holiday"), timeout=timeout),
-        ]
-    )
+    ]
+    if include_rag:
+        tools.append(ManualSearchTool(service=rag_service, settings=settings))
+    return ToolRegistry(tools)
