@@ -109,6 +109,7 @@ def test_weather_converts_utc_and_keeps_forecast_provenance():
     assert period["precipitation_mm"] == 0.0
     assert result.data["updated_at"] == "2026-11-18T01:00:00Z"
     assert session.calls[0][1]["headers"]["User-Agent"] == "test/1 contact.example"
+    assert session.calls[0][1]["params"] == {"lat": 37.27, "lon": 127.03}
 
 
 def test_holidays_filter_date_range_without_fabricating_names():

@@ -123,7 +123,7 @@ class MaintenanceAgent:
                     {"tool": "get_maintenance_weather", "arguments_from": "search_maintenance_location"},
                 ]
             )
-        if intent == "maintenance_plan" and (conditions.get("weekdays_only") or conditions.get("exclude_holidays")):
+        if intent == "maintenance_plan" and conditions.get("exclude_holidays"):
             year = int((conditions.get("start_date") or self.clock().date().isoformat())[:4])
             tasks.append(
                 {
@@ -246,11 +246,30 @@ class MaintenanceAgent:
             return {"needs_replan": False, "status": "clarification", "clarification": clarification}
 
         conditions = analysis["conditions"]
+        weather_result = results.get("get_maintenance_weather", {})
+        holiday_result = results.get("get_public_holidays", {})
+        unavailable = []
+        if conditions.get("no_precipitation") and not weather_result.get("ok"):
+            unavailable.append(weather_result.get("error", {}).get("message", "날씨 예보를 확인하지 못했습니다."))
+        if conditions.get("exclude_holidays") and not holiday_result.get("ok"):
+            unavailable.append(holiday_result.get("error", {}).get("message", "공휴일을 확인하지 못했습니다."))
+        if unavailable:
+            self._event(
+                state,
+                "stage.completed",
+                "judge",
+                {"constraint_check": "unavailable", "reasons": unavailable},
+            )
+            return {
+                "needs_replan": False,
+                "selected_date": None,
+                "status": "constraint_unavailable",
+                "clarification": " ".join(unavailable) + " 확인되지 않은 값을 임의로 채우지 않고 일정을 중단했습니다.",
+            }
         dates = state.get("candidate_dates") or self._dates(conditions["start_date"], conditions["end_date"])
         if conditions.get("weekdays_only"):
             dates = [day for day in dates if date.fromisoformat(day).weekday() < 5]
         holidays = set()
-        holiday_result = results.get("get_public_holidays", {})
         if holiday_result.get("ok"):
             holidays = {item["date"] for item in holiday_result["data"].get("holidays", [])}
         if conditions.get("exclude_holidays"):
@@ -348,6 +367,8 @@ class MaintenanceAgent:
             parts.append(
                 f"조건을 만족하는 날짜를 확정하지 못했습니다. 재계획 {state.get('replan_count', 0)}회 후 중단했습니다."
             )
+        elif intent == "maintenance_plan" and status == "constraint_unavailable":
+            parts.append("필수 일정 제약을 확인하지 못해 후보 날짜를 확정하지 않았습니다.")
         if results.get("get_maintenance_weather", {}).get("ok"):
             parts.append("날씨 정보: MET Norway Locationforecast 2.0 (예보는 정비 안전성이나 고장 원인을 판단하지 않습니다.)")
         if results.get("get_public_holidays", {}).get("ok"):

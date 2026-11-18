@@ -1,0 +1,248 @@
+{
+  "session": {
+    "session_id": "12474609579b4eab9695d54325590770",
+    "user_request": "다음 주 수원시, 경기도에서 비 없는 평일 오전 공휴일 제외 정비 계획을 세워줘",
+    "status": "completed",
+    "created_at": "2026-11-18T05:12:40.942849+00:00",
+    "completed_at": "2026-11-18T05:12:43.863374+00:00"
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "event_type": "stage.started",
+      "stage": "analyze",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:40.949869+00:00"
+    },
+    {
+      "sequence": 2,
+      "event_type": "agent.decision",
+      "stage": "analyze",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {
+        "intent": "maintenance_plan",
+        "reason": "규칙 기반으로 요청의 명시 조건만 추출했습니다.",
+        "source": "rule"
+      },
+      "created_at": "2026-11-18T05:12:40.958885+00:00"
+    },
+    {
+      "sequence": 3,
+      "event_type": "stage.completed",
+      "stage": "analyze",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"memory_used": false},
+      "created_at": "2026-11-18T05:12:40.961599+00:00"
+    },
+    {
+      "sequence": 4,
+      "event_type": "stage.started",
+      "stage": "plan",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:40.967598+00:00"
+    },
+    {
+      "sequence": 5,
+      "event_type": "agent.decision",
+      "stage": "plan",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {
+        "tools": ["search_maintenance_location", "get_maintenance_weather", "get_public_holidays"],
+        "reason": "명시 조건에 필요한 Tool만 선택",
+        "source": "rule"
+      },
+      "created_at": "2026-11-18T05:12:40.971111+00:00"
+    },
+    {
+      "sequence": 6,
+      "event_type": "stage.completed",
+      "stage": "plan",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"task_count": 3},
+      "created_at": "2026-11-18T05:12:40.974119+00:00"
+    },
+    {
+      "sequence": 7,
+      "event_type": "stage.started",
+      "stage": "execute",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:40.978122+00:00"
+    },
+    {
+      "sequence": 8,
+      "event_type": "tool.requested",
+      "stage": "execute",
+      "tool_name": "search_maintenance_location",
+      "duration_ms": null,
+      "payload": {"arguments": {"query": "수원시, 경기도"}},
+      "created_at": "2026-11-18T05:12:40.981299+00:00"
+    },
+    {
+      "sequence": 9,
+      "event_type": "tool.completed",
+      "stage": "execute",
+      "tool_name": "search_maintenance_location",
+      "duration_ms": 1051.725,
+      "payload": {"ok": true, "error_code": null},
+      "created_at": "2026-11-18T05:12:42.036746+00:00"
+    },
+    {
+      "sequence": 10,
+      "event_type": "tool.requested",
+      "stage": "execute",
+      "tool_name": "get_maintenance_weather",
+      "duration_ms": null,
+      "payload": {
+        "arguments": {"latitude": 37.27818, "longitude": 127.03164, "timezone": "Asia/Seoul"}
+      },
+      "created_at": "2026-11-18T05:12:42.040243+00:00"
+    },
+    {
+      "sequence": 11,
+      "event_type": "tool.completed",
+      "stage": "execute",
+      "tool_name": "get_maintenance_weather",
+      "duration_ms": 1107.476,
+      "payload": {"ok": true, "error_code": null},
+      "created_at": "2026-11-18T05:12:43.151328+00:00"
+    },
+    {
+      "sequence": 12,
+      "event_type": "tool.requested",
+      "stage": "execute",
+      "tool_name": "get_public_holidays",
+      "duration_ms": null,
+      "payload": {
+        "arguments": {
+          "year": 2026,
+          "country_code": "KR",
+          "start_date": "2026-11-23",
+          "end_date": "2026-11-29"
+        }
+      },
+      "created_at": "2026-11-18T05:12:43.154833+00:00"
+    },
+    {
+      "sequence": 13,
+      "event_type": "tool.completed",
+      "stage": "execute",
+      "tool_name": "get_public_holidays",
+      "duration_ms": 647.072,
+      "payload": {"ok": true, "error_code": null},
+      "created_at": "2026-11-18T05:12:43.806319+00:00"
+    },
+    {
+      "sequence": 14,
+      "event_type": "stage.completed",
+      "stage": "execute",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {
+        "completed_tools": [
+          "search_maintenance_location",
+          "selected_location",
+          "get_maintenance_weather",
+          "get_public_holidays"
+        ]
+      },
+      "created_at": "2026-11-18T05:12:43.813861+00:00"
+    },
+    {
+      "sequence": 15,
+      "event_type": "stage.started",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:43.818856+00:00"
+    },
+    {
+      "sequence": 16,
+      "event_type": "agent.decision",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {
+        "candidate_date": "2026-11-23",
+        "satisfied": false,
+        "reason": "강수 예보가 있습니다.",
+        "replan": true,
+        "source": "rule"
+      },
+      "created_at": "2026-11-18T05:12:43.825373+00:00"
+    },
+    {
+      "sequence": 17,
+      "event_type": "stage.completed",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"constraint_check": "failed"},
+      "created_at": "2026-11-18T05:12:43.828374+00:00"
+    },
+    {
+      "sequence": 18,
+      "event_type": "agent.replanned",
+      "stage": "replan",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"replan_count": 1, "candidate_index": 1, "reused_tool_results": true},
+      "created_at": "2026-11-18T05:12:43.833885+00:00"
+    },
+    {
+      "sequence": 19,
+      "event_type": "stage.started",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:43.837534+00:00"
+    },
+    {
+      "sequence": 20,
+      "event_type": "agent.decision",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"candidate_date": "2026-11-24", "satisfied": true, "source": "rule"},
+      "created_at": "2026-11-18T05:12:43.842051+00:00"
+    },
+    {
+      "sequence": 21,
+      "event_type": "stage.completed",
+      "stage": "judge",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"constraint_check": "satisfied"},
+      "created_at": "2026-11-18T05:12:43.845051+00:00"
+    },
+    {
+      "sequence": 22,
+      "event_type": "stage.started",
+      "stage": "respond",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {},
+      "created_at": "2026-11-18T05:12:43.851092+00:00"
+    },
+    {
+      "sequence": 23,
+      "event_type": "stage.completed",
+      "stage": "respond",
+      "tool_name": null,
+      "duration_ms": null,
+      "payload": {"status": "completed"},
+      "created_at": "2026-11-18T05:12:43.858095+00:00"
+    }
+  ]
+}

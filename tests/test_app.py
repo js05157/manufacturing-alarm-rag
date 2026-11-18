@@ -58,6 +58,8 @@ def test_greeting_does_not_show_maintenance_instructions_or_llm_timing(monkeypat
 
 
 def test_room_creation_switching_history_isolation_and_page_reload(monkeypatch, isolated_chats):
+    if not Settings().sqlite.exists():
+        pytest.skip("Local corpus not built")
     from streamlit.testing.v1 import AppTest
     from rag.pipeline import RAGService
     from rag.chat_store import ChatStore
@@ -155,6 +157,8 @@ def test_repeated_new_chat_is_an_unsaved_draft_and_preserves_old_empty_rooms(iso
 
 
 def test_starter_question_starts_one_saved_conversation(monkeypatch, isolated_chats):
+    if not Settings().sqlite.exists():
+        pytest.skip("Local corpus not built")
     from streamlit.testing.v1 import AppTest
     from rag.pipeline import RAGService
     from rag.chat_store import ChatStore

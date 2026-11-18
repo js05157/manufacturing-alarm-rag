@@ -159,7 +159,7 @@ class WeatherForecastTool:
         body, error = _request_json(
             self.session,
             self.endpoint,
-            params={"lat": round(latitude, 5), "lon": round(longitude, 5)},
+            params={"lat": round(latitude, 4), "lon": round(longitude, 4)},
             headers={"User-Agent": self.user_agent},
             timeout=self.timeout,
         )

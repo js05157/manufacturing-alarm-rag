@@ -105,7 +105,7 @@ def test_agent_replans_dates_without_recalling_tools_and_keeps_sources(tmp_path)
     holiday = StubTool("get_public_holidays", ToolResult.success({"holidays": []}))
     agent = make_agent(tmp_path, [manual, location, weather, holiday])
     result = agent.invoke(
-        "E.OC1 점검 근거와 다음 주 수원시, 경기도에서 비 없는 평일 오전 정비 계획을 세워줘",
+        "E.OC1 점검 근거와 다음 주 수원시, 경기도에서 비 없는 평일 오전 공휴일 제외 정비 계획을 세워줘",
         conversation_id="room-1",
     )
     assert result["selected_date"] == "2026-11-25"
@@ -144,7 +144,7 @@ def test_replan_limit_is_reported_and_memory_updates_only_changed_conditions(tmp
     holiday = StubTool("get_public_holidays", ToolResult.success({"holidays": []}))
     agent = make_agent(tmp_path, [location, weather, holiday], max_replans=1)
     first = agent.invoke(
-        "다음 주 수원시, 경기도에서 비 없는 평일 오전 정비 계획",
+        "다음 주 수원시, 경기도에서 비 없는 평일 오전 공휴일 제외 정비 계획",
         conversation_id="memory-room",
     )
     assert first["status"] == "replan_limit" and first["replan_count"] == 1
@@ -152,6 +152,24 @@ def test_replan_limit_is_reported_and_memory_updates_only_changed_conditions(tmp
     assert second["memory_used"] is True
     assert second["conditions"]["location"] == "수원시, 경기도"
     assert second["conditions"]["start_date"] == "2026-11-23"
+
+
+def test_unavailable_required_constraint_never_becomes_a_schedule(tmp_path):
+    location = StubTool(
+        "search_maintenance_location",
+        ToolResult.success(
+            {"candidates": [{"name": "수원시", "latitude": 37.27, "longitude": 127.03, "timezone": "Asia/Seoul"}]}
+        ),
+    )
+    weather = StubTool("get_maintenance_weather", ToolResult.failure("TIMEOUT", "날씨 API 시간 초과", retryable=True))
+    agent = make_agent(tmp_path, [location, weather])
+    result = agent.invoke(
+        "2026-11-25 수원시, 경기도에서 비 없는 오전 정비 계획",
+        conversation_id="failure-room",
+    )
+    assert result["status"] == "constraint_unavailable"
+    assert result["selected_date"] is None and result["replan_count"] == 0
+    assert "임의로 채우지 않고" in result["text"]
 
 
 def test_manual_rag_tool_returns_exact_page_sources_and_no_index_failure():

@@ -25,9 +25,13 @@ class Retrieval:
 class RAGService:
     def __init__(self, settings=None, sqlite=None, vector=None, generator=None):
         self.settings = settings or Settings()
-        self.sqlite = sqlite or SQLiteRetriever(self.settings.sqlite)
+        self._sqlite = sqlite
         self._vector = vector
         self._generator = generator
+
+    @cached_property
+    def sqlite(self):
+        return self._sqlite or SQLiteRetriever(self.settings.sqlite)
 
     @cached_property
     def vector(self):
@@ -82,6 +86,22 @@ class RAGService:
 
     def answer(self, question, evidence_only=False, history=None):
         started = perf_counter()
+        if not question.strip():
+            raise ValueError("질문을 입력해 주세요.")
+        preflight = route(question, ())
+        # Greetings, capability questions, and context-free direct guidance do
+        # not need the licensed manual database. Keep the corpus lazy so the
+        # UI can explain setup even before local data is built.
+        if preflight.kind in ("greeting", "capability") or (
+            self._sqlite is None and not history and preflight.kind in DIRECT_REPLIES
+        ):
+            resolved = resolve_question(question, history, ())
+            direct_route = "clarification" if resolved.clarification else preflight.kind
+            retrieval = Retrieval(question, direct_route)
+            return {"status": "guidance", "text": resolved.clarification or DIRECT_REPLIES[direct_route], "evidence_ids": [],
+                    "highlights": [], "mode": "direct", "validation": {"valid": True, "reason": "non-retrieval guidance"},
+                    "elapsed_seconds": perf_counter()-started, "retrieval": asdict(retrieval),
+                    "context_used": resolved.used, "conversation_context": resolved.context if resolved.clarification else {}}
         resolved = resolve_question(question, history, self.sqlite.codes())
         if resolved.clarification:
             retrieval = Retrieval(question, "clarification")
